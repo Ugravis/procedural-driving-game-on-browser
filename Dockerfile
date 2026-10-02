@@ -1,6 +1,6 @@
 # --- base --------------------------------------------------------------
 FROM node:22-alpine AS base
-WORKDIR /app
+WORKDIR /driving-game
 COPY package.json package-lock.json* ./
 
 # --- dev -----------------------------------------------------------------
@@ -20,6 +20,6 @@ RUN npm run build
 # --- prod --------------------------------------------------------------
 # Image statique légère, utile pour tester/déployer le build de prod.
 FROM nginx:alpine AS prod
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /driving-game/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
