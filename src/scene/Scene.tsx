@@ -1,7 +1,7 @@
 import { Sky } from '@react-three/drei'
-import { GameClock } from './GameClock'
 import { Lights } from './Lights'
-import { RotatingBox } from './RotatingBox'
+import { PathPreviewVehicle } from './PathPreviewVehicle'
+import { RoadPath } from './RoadPath'
 
 export function Scene() {
   return (
@@ -9,8 +9,8 @@ export function Scene() {
       <Sky sunPosition={[10, 10, 5]} />
       <fog attach="fog" args={['#cfe8e0', 10, 60]} />
       <Lights />
-      <RotatingBox />
-      <GameClock />
+      <RoadPath />
+      <PathPreviewVehicle />
     </>
   )
 }
