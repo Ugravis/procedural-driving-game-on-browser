@@ -3,13 +3,14 @@ import { useGameStore } from '../state/gameStore'
 
 // Le panneau debug lui-même se base sur un hook réactif classique (le toggle
 // change rarement, le coût de re-render est négligeable). Les valeurs qui
-// changent en continu (fps, position) sont écrites directement dans le DOM
-// via subscribe, comme pour SpeedReadout.
+// changent en continu (fps, position, nb de points du chemin) sont écrites
+// directement dans le DOM via subscribe, comme pour SpeedReadout.
 export function DebugPanel() {
   const debugOverlay = useGameStore((s) => s.settings.debugOverlay)
   const toggleDebugOverlay = useGameStore((s) => s.toggleDebugOverlay)
   const fpsRef = useRef<HTMLSpanElement>(null)
   const positionRef = useRef<HTMLSpanElement>(null)
+  const pathPointCountRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     const unsubFps = useGameStore.subscribe(
@@ -28,9 +29,17 @@ export function DebugPanel() {
       },
       { fireImmediately: true },
     )
+    const unsubPathPointCount = useGameStore.subscribe(
+      (s) => s.debug.pathPointCount,
+      (count) => {
+        if (pathPointCountRef.current) pathPointCountRef.current.textContent = String(count)
+      },
+      { fireImmediately: true },
+    )
     return () => {
       unsubFps()
       unsubPosition()
+      unsubPathPointCount()
     }
   }, [])
 
@@ -46,6 +55,9 @@ export function DebugPanel() {
           </div>
           <div>
             Position : <span ref={positionRef} />
+          </div>
+          <div>
+            Points du chemin : <span ref={pathPointCountRef} />
           </div>
         </div>
       )}

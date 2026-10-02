@@ -4,10 +4,12 @@ import { subscribeWithSelector } from 'zustand/middleware'
 export interface PlayerState {
   position: [number, number, number]
   speed: number // km/h
+  distanceTraveled: number // m, le long du chemin généré
 }
 
 export interface DebugState {
   fps: number
+  pathPointCount: number
 }
 
 export interface SettingsState {
@@ -18,8 +20,13 @@ interface GameStore {
   player: PlayerState
   debug: DebugState
   settings: SettingsState
-  setPlayerState: (position: PlayerState['position'], speed: number) => void
+  setPlayerState: (
+    position: PlayerState['position'],
+    speed: number,
+    distanceTraveled: number,
+  ) => void
   setFps: (fps: number) => void
+  setPathPointCount: (count: number) => void
   toggleDebugOverlay: () => void
 }
 
@@ -28,11 +35,13 @@ interface GameStore {
 // pour éviter un re-render à chaque frame sur les valeurs qui changent en continu.
 export const useGameStore = create<GameStore>()(
   subscribeWithSelector((set) => ({
-    player: { position: [0, 1, 0], speed: 0 },
-    debug: { fps: 0 },
+    player: { position: [0, 1, 0], speed: 0, distanceTraveled: 0 },
+    debug: { fps: 0, pathPointCount: 0 },
     settings: { debugOverlay: false },
-    setPlayerState: (position, speed) => set({ player: { position, speed } }),
-    setFps: (fps) => set({ debug: { fps } }),
+    setPlayerState: (position, speed, distanceTraveled) =>
+      set({ player: { position, speed, distanceTraveled } }),
+    setFps: (fps) => set((s) => ({ debug: { ...s.debug, fps } })),
+    setPathPointCount: (pathPointCount) => set((s) => ({ debug: { ...s.debug, pathPointCount } })),
     toggleDebugOverlay: () =>
       set((s) => ({ settings: { debugOverlay: !s.settings.debugOverlay } })),
   })),
