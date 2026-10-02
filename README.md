@@ -34,6 +34,13 @@ Pour construire l'image de production (servie par nginx) :
 docker build --target prod -t procedural-driving-game .
 ```
 
+⚠️ `node_modules` est un volume Docker séparé du code (pour ne pas écraser les dépendances de l'image avec celles de l'hôte). Il ne se met donc pas à jour automatiquement : après avoir ajouté/retiré une dépendance npm (ou récupéré des changements qui en ajoutent), reconstruis avec :
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
 ## Scripts
 
 | Script                 | Description                                                            |
