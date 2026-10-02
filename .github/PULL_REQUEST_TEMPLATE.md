@@ -1,5 +1,5 @@
 Issue #
-Type : 
+Type :
 
 ## Description
 
