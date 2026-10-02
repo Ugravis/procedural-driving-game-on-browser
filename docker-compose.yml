@@ -1,5 +1,6 @@
 services:
-  app:
+  driving-game:
+    container_name: driving-game
     build:
       context: .
       target: dev
