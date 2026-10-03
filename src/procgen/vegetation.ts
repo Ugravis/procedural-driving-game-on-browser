@@ -1,3 +1,4 @@
+import { isUnderWater } from './water'
 import type { ProceduralPath } from './pathGenerator'
 import { heightAt } from './terrain'
 
@@ -41,7 +42,7 @@ export function scatterVegetation(
       const jitterZ = cellZ + (hash(cellX, cellZ + 0.59) - 0.5) * CELL_SIZE
 
       const { distance } = path.roadAt(jitterX, jitterZ)
-      if (distance < ROAD_CLEARANCE) continue
+      if (distance < ROAD_CLEARANCE || isUnderWater(jitterX, jitterZ)) continue
 
       instances.push({
         position: [jitterX, heightAt(jitterX, jitterZ, path), jitterZ],

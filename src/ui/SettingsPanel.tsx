@@ -128,6 +128,22 @@ export function SettingsPanel() {
         onChange={(octaves) => setDraft({ octaves })}
       />
       <Slider
+        label="Niveau d'eau (m)"
+        value={draft.waterLevel}
+        min={-80}
+        max={20}
+        step={1}
+        onChange={(waterLevel) => setDraft({ waterLevel })}
+      />
+      <Slider
+        label="Espacement des ponts (m)"
+        value={draft.bridgeSpacing}
+        min={500}
+        max={10000}
+        step={250}
+        onChange={(bridgeSpacing) => setDraft({ bridgeSpacing })}
+      />
+      <Slider
         label="Persistance"
         value={draft.persistence}
         min={0.1}

@@ -3,6 +3,7 @@ import { Lights } from './Lights'
 import { PathPreviewVehicle } from './PathPreviewVehicle'
 import { RoadPath } from './RoadPath'
 import { Terrain } from './Terrain'
+import { Water } from './Water'
 
 export function Scene() {
   return (
@@ -12,6 +13,7 @@ export function Scene() {
       <Lights />
       <Terrain />
       <RoadPath />
+      <Water />
       <PathPreviewVehicle />
     </>
   )
