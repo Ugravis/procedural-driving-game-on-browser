@@ -3,6 +3,7 @@ import { Object3D, type InstancedMesh } from 'three'
 import { proceduralPath } from '../procgen/pathGenerator'
 import { CHUNK_SIZE } from '../procgen/terrain'
 import { useGameStore } from '../state/gameStore'
+import { foliageMaterial } from './seasons'
 import { scatterVegetation } from '../procgen/vegetation'
 
 const dummy = new Object3D()
@@ -17,6 +18,7 @@ interface ChunkVegetationProps {
 export function ChunkVegetation({ chunkX, chunkZ }: ChunkVegetationProps) {
   const meshRef = useRef<InstancedMesh>(null)
   const lookMode = useGameStore((s) => s.settings.lookMode)
+  const season = useGameStore((s) => s.settings.season)
   const instances = useMemo(
     () => scatterVegetation(chunkX, chunkZ, CHUNK_SIZE, proceduralPath),
     [chunkX, chunkZ],
@@ -45,11 +47,7 @@ export function ChunkVegetation({ chunkX, chunkZ }: ChunkVegetationProps) {
       receiveShadow
     >
       <coneGeometry args={[1, 3, 6]} />
-      <meshStandardMaterial
-        key={lookMode ? 'look' : 'plain'}
-        color={lookMode ? '#2e8b3e' : '#2f5233'}
-        flatShading={lookMode}
-      />
+      <primitive object={foliageMaterial(season, lookMode)} attach="material" />
     </instancedMesh>
   )
 }

@@ -7,6 +7,7 @@ import {
   type LandscapeParams,
 } from '../procgen/landscape'
 import { proceduralPath } from '../procgen/pathGenerator'
+import type { Season } from '../scene/seasons'
 
 export interface PlayerState {
   position: [number, number, number]
@@ -25,6 +26,7 @@ export interface SettingsState {
   showContours: boolean
   drivingReverse: boolean
   lookMode: boolean // ambiance ombrée : soleil, ombres, rendu facetté
+  season: Season
   cameraDistance: number // m, recul de la caméra derrière le véhicule
   cameraHeight: number // m, hauteur de la caméra
   cameraYaw: number // degrés, rotation de la caméra autour du véhicule
@@ -51,6 +53,7 @@ interface GameStore {
   toggleContours: () => void
   toggleDrivingReverse: () => void
   toggleLookMode: () => void
+  setSeason: (season: Season) => void
   setCameraDistance: (value: number) => void
   setCameraHeight: (value: number) => void
   setCameraYaw: (value: number) => void
@@ -91,6 +94,7 @@ export const useGameStore = create<GameStore>()(
       showContours: false,
       drivingReverse: false,
       lookMode: false,
+      season: 'été',
       cameraDistance: 11,
       cameraHeight: 4,
       cameraYaw: 0,
@@ -106,6 +110,7 @@ export const useGameStore = create<GameStore>()(
     setPathPointCount: (pathPointCount) => set((s) => ({ debug: { ...s.debug, pathPointCount } })),
     toggleContours: () =>
       set((s) => ({ settings: { ...s.settings, showContours: !s.settings.showContours } })),
+    setSeason: (season) => set((s) => ({ settings: { ...s.settings, season } })),
     toggleLookMode: () =>
       set((s) => ({ settings: { ...s.settings, lookMode: !s.settings.lookMode } })),
     toggleDrivingReverse: () =>

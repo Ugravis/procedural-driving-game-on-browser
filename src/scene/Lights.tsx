@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import { Object3D, Vector3, type DirectionalLight } from 'three'
 import { useGameStore } from '../state/gameStore'
+import { SEASON_PALETTES } from './seasons'
 
 const SUN_DIRECTION = new Vector3(10, 10, 5).normalize()
 const SUN_DISTANCE = 120 // m, distance du soleil au joueur
@@ -12,6 +13,7 @@ export function Lights() {
   const sunRef = useRef<DirectionalLight>(null)
   const target = useMemo(() => new Object3D(), [])
   const look = useGameStore((s) => s.settings.lookMode)
+  const palette = SEASON_PALETTES[useGameStore((s) => s.settings.season)]
 
   useFrame(() => {
     const sun = sunRef.current
@@ -32,8 +34,8 @@ export function Lights() {
       <directionalLight
         ref={sunRef}
         target={target}
-        color={look ? '#ffe2a8' : '#ffffff'}
-        intensity={look ? 2.2 : 1.2}
+        color={palette.sun}
+        intensity={palette.sunIntensity * (look ? 1.6 : 0.8)}
         castShadow={look}
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-SHADOW_HALF_SIZE}

@@ -4,6 +4,7 @@ import { proceduralPath } from '../procgen/pathGenerator'
 import { buildRoadSurface } from '../procgen/roadSurface'
 import { buildChunkGeometry, CHUNK_RESOLUTION, CHUNK_SIZE } from '../procgen/terrain'
 import { useGameStore } from '../state/gameStore'
+import { terrainMaterial } from './seasons'
 
 const CONTOUR_INTERVAL = 5 // m
 
@@ -15,6 +16,7 @@ interface TerrainChunkProps {
 export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
   const showContours = useGameStore((s) => s.settings.showContours)
   const lookMode = useGameStore((s) => s.settings.lookMode)
+  const season = useGameStore((s) => s.settings.season)
   const geometry = useMemo(
     () => buildChunkGeometry(chunkX, chunkZ, proceduralPath),
     [chunkX, chunkZ],
@@ -37,13 +39,7 @@ export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
 
   return (
     <group position={position}>
-      <mesh geometry={geometry} receiveShadow>
-        <meshStandardMaterial
-          key={lookMode ? 'look' : 'plain'}
-          color={lookMode ? '#7fbf5a' : '#4a6b4a'}
-          flatShading={lookMode}
-        />
-      </mesh>
+      <mesh geometry={geometry} receiveShadow material={terrainMaterial(season, lookMode)} />
       <mesh geometry={roadGeometry} receiveShadow>
         <meshStandardMaterial color="#3a3f44" polygonOffset polygonOffsetFactor={-2} />
       </mesh>
