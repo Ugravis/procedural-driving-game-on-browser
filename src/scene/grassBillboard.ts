@@ -8,8 +8,8 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { SEASON_PALETTES, type Season } from './seasons'
 
-const TUFT_WIDTH = 1 // m
-const TUFT_HEIGHT = 0.9 // m
+const TUFT_WIDTH = 1.2 // m
+const TUFT_HEIGHT = 0.7 // m
 
 let geometry: ReturnType<typeof mergeGeometries> | null = null
 let texture: CanvasTexture | null = null
@@ -26,23 +26,24 @@ export function grassGeometry() {
   return geometry
 }
 
-// Brins dessinés sur un canvas, fond transparent.
+// Une seule silhouette de buisson, dessinée sur un canvas, fond transparent.
 function grassTexture(): CanvasTexture {
   if (!texture) {
     const canvas = document.createElement('canvas')
     canvas.width = 64
     canvas.height = 64
     const context = canvas.getContext('2d')!
-    context.strokeStyle = '#ffffff'
-    context.lineCap = 'round'
-    for (let blade = 0; blade < 14; blade++) {
-      const x = 4 + ((blade * 37) % 56)
-      const lean = ((blade * 13) % 11) - 5
-      context.lineWidth = 2 + (blade % 3)
+    context.fillStyle = '#ffffff'
+    const clumps = [
+      [20, 40, 14],
+      [36, 34, 18],
+      [48, 42, 12],
+      [30, 46, 14],
+    ]
+    for (const [x = 0, y = 0, radius = 0] of clumps) {
       context.beginPath()
-      context.moveTo(x, 64)
-      context.quadraticCurveTo(x + lean * 0.5, 36, x + lean, 6 + (blade % 5) * 4)
-      context.stroke()
+      context.arc(x, y, radius, 0, Math.PI * 2)
+      context.fill()
     }
     texture = new CanvasTexture(canvas)
     texture.colorSpace = SRGBColorSpace
