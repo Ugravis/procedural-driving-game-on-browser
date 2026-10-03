@@ -44,6 +44,9 @@ interface GameStore {
   landscape: LandscapeParams // appliqué
   landscapeDraft: LandscapeParams // en cours d'édition
   generation: number // incrémenté à chaque régénération
+  lightsOn: boolean // feux allumés (touche L)
+  handbrake: boolean // frein à main engagé (touche P, interrupteur)
+  braking: boolean // feux stop allumés : freinage ou frein à main
   setPlayerState: (
     position: PlayerState['position'],
     speed: number,
@@ -66,6 +69,9 @@ interface GameStore {
   teleportTarget: { x: number; z: number } | null // demande de téléportation, consommée par le véhicule
   teleportToBiome: (biomeIndex: number) => void
   consumeTeleport: () => void
+  toggleLights: () => void
+  toggleHandbrake: () => void
+  setBraking: (braking: boolean) => void
 }
 
 function randomSeed(): number {
@@ -101,6 +107,9 @@ export const useGameStore = create<GameStore>()(
     landscape: DEFAULT_LANDSCAPE,
     landscapeDraft: DEFAULT_LANDSCAPE,
     generation: 0,
+    lightsOn: false,
+    handbrake: false,
+    braking: false,
     teleportTarget: null,
     teleportToBiome: (biomeIndex) => {
       const [x, , z] = get().player.position
@@ -114,6 +123,9 @@ export const useGameStore = create<GameStore>()(
       if (target) set({ teleportTarget: target })
     },
     consumeTeleport: () => set({ teleportTarget: null }),
+    toggleLights: () => set((s) => ({ lightsOn: !s.lightsOn })),
+    toggleHandbrake: () => set((s) => ({ handbrake: !s.handbrake })),
+    setBraking: (braking) => set({ braking }),
     setPlayerState: (position, speed, distanceTraveled, grade, heading) =>
       set({ player: { position, speed, distanceTraveled, grade, heading } }),
     setFps: (fps) => set((s) => ({ debug: { ...s.debug, fps } })),

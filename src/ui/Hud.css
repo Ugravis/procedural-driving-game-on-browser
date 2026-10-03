@@ -199,3 +199,19 @@
   color: white;
   cursor: pointer;
 }
+
+.hud-key {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  font: inherit;
+  text-align: center;
+}
+
+.hud-panel dl > div.is-active dt,
+.hud-panel dl > div.is-active dd {
+  color: #9be3ad;
+  opacity: 1;
+}
