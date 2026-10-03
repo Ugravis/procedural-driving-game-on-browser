@@ -1,45 +1,25 @@
-import { createNoise2D } from 'simplex-noise'
 import { BufferGeometry, Float32BufferAttribute } from 'three'
-import type { ProceduralPath } from './pathGenerator'
+import { landscapeHeight } from './landscape'
+import { ROAD_HALF_WIDTH, type ProceduralPath } from './pathGenerator'
 
 export const CHUNK_SIZE = 50 // m, taille d'un chunk de terrain
-export const CHUNK_RESOLUTION = 20 // subdivisions par côté
+export const CHUNK_RESOLUTION = 50 // subdivisions par côté (1 m, pour que l'aplanissement de la route soit net)
 export const RENDER_RADIUS_CHUNKS = 3 // rayon (en chunks) chargé autour du joueur
 
-const CORRIDOR_WIDTH = 15 // m, le terrain colle exactement à l'élévation de la route sur cette largeur
-const BLEND_WIDTH = 35 // m, transition progressive vers le relief ambiant au-delà du corridor
-const AMBIENT_HEIGHT_SCALE = 10 // amplitude des collines "libres"
-const AMBIENT_FREQUENCY = 0.015
-
-const ambientNoise2D = createNoise2D()
-
-/** Relief ambiant (loin de la route) : un fBm à 3 octaves pour des collines
- * lisses mais variées, indépendant du chemin. */
-function ambientHeight(x: number, z: number): number {
-  let height = 0
-  let amplitude = 1
-  let frequency = AMBIENT_FREQUENCY
-  for (let octave = 0; octave < 3; octave++) {
-    height += ambientNoise2D(x * frequency, z * frequency) * amplitude
-    amplitude *= 0.5
-    frequency *= 2
-  }
-  return height * AMBIENT_HEIGHT_SCALE
-}
+const SHOULDER_WIDTH = 1 // m, transition douce entre l'aplanissement et le relief naturel
 
 /**
- * Hauteur du terrain en (x, z) : colle à l'élévation de la route dans le
- * corridor, se fond progressivement dans le relief ambiant au-delà (comme
- * slowroads.io — le terrain épouse la route, pas l'inverse).
+ * Terrain sous la route : aplani à son altitude sur sa demi-largeur, puis une
+ * transition d'un mètre vers le relief naturel. Au-delà, c'est le paysage brut.
  */
 export function heightAt(x: number, z: number, path: ProceduralPath): number {
-  const { elevation, distance } = path.nearestElevation(x, z)
-  if (distance <= CORRIDOR_WIDTH) return elevation
-  const ambient = ambientHeight(x, z)
-  if (distance >= CORRIDOR_WIDTH + BLEND_WIDTH) return ambient
-  const t = (distance - CORRIDOR_WIDTH) / BLEND_WIDTH
-  const smooth = t * t * (3 - 2 * t) // smoothstep : transition douce, pas de pli visible
-  return elevation + (ambient - elevation) * smooth
+  const road = path.roadAt(x, z)
+  if (road.distance <= ROAD_HALF_WIDTH) return road.height
+  const natural = landscapeHeight(x, z)
+  if (road.distance >= ROAD_HALF_WIDTH + SHOULDER_WIDTH) return natural
+  const t = (road.distance - ROAD_HALF_WIDTH) / SHOULDER_WIDTH
+  const smooth = t * t * (3 - 2 * t)
+  return road.height + (natural - road.height) * smooth
 }
 
 /** Construit la géométrie d'un chunk de terrain (coordonnées locales centrées

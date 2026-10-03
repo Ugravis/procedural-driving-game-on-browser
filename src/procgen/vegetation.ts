@@ -40,7 +40,7 @@ export function scatterVegetation(
       const jitterX = cellX + (hash(cellX + 0.37, cellZ) - 0.5) * CELL_SIZE
       const jitterZ = cellZ + (hash(cellX, cellZ + 0.59) - 0.5) * CELL_SIZE
 
-      const { distance } = path.nearestElevation(jitterX, jitterZ)
+      const { distance } = path.roadAt(jitterX, jitterZ)
       if (distance < ROAD_CLEARANCE) continue
 
       instances.push({
