@@ -109,12 +109,18 @@ export class ProceduralPath {
   private segmentLow = 0 // plus petit segment de contrôle échantillonné
   private segmentHigh = -1 // plus grand segment de contrôle échantillonné
   revision = 0
+  private currentSeed = 0
 
   constructor(seed: number) {
     this.reset(seed)
   }
 
+  get seed() {
+    return this.currentSeed
+  }
+
   reset(seed: number) {
+    this.currentSeed = seed
     this.wander2D = createNoise2D(createRandom(seed + WANDER_SALT))
     this.direction2D = createNoise2D(createRandom(seed + DIRECTION_SALT))
     const origin: ControlPoint = {
