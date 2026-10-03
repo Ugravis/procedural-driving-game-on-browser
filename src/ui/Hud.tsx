@@ -1,5 +1,6 @@
 import './Hud.css'
 import { EnvironmentPanel } from './EnvironmentPanel'
+import { Minimap } from './Minimap'
 import { SettingsPanel } from './SettingsPanel'
 
 export function Hud() {
@@ -9,6 +10,7 @@ export function Hud() {
         <EnvironmentPanel />
         <SettingsPanel />
       </div>
+      <Minimap />
     </div>
   )
 }

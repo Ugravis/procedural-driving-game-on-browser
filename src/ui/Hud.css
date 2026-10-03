@@ -119,3 +119,19 @@
   background: #2d6a4f;
   color: white;
 }
+
+.hud-minimap {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.hud-minimap canvas {
+  display: block;
+  width: 200px;
+  height: 200px;
+}
