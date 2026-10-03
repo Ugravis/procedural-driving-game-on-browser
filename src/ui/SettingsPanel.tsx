@@ -36,6 +36,7 @@ export function SettingsPanel() {
   const toggleDrivingReverse = useGameStore((s) => s.toggleDrivingReverse)
   const setCameraDistance = useGameStore((s) => s.setCameraDistance)
   const setCameraHeight = useGameStore((s) => s.setCameraHeight)
+  const setCameraYaw = useGameStore((s) => s.setCameraYaw)
   const setSeedDraft = useGameStore((s) => s.setSeedDraft)
   const setDraft = useGameStore((s) => s.setLandscapeDraft)
   const regenerate = useGameStore((s) => s.regenerate)
@@ -55,28 +56,21 @@ export function SettingsPanel() {
         Rouler en arrière
       </label>
 
-      <h3>Graine</h3>
-      <div className="hud-seed">
-        <input
-          type="number"
-          min={0}
-          step={1}
-          value={seedDraft}
-          aria-label="Graine"
-          onChange={(e) => setSeedDraft(Number(e.target.value) >>> 0)}
-        />
-        <button type="button" className="hud-button" onClick={randomizeSeed}>
-          Aléatoire
-        </button>
-      </div>
-
       <Slider
         label="Recul caméra (m)"
         value={settings.cameraDistance}
         min={4}
-        max={30}
+        max={150}
         step={1}
         onChange={setCameraDistance}
+      />
+      <Slider
+        label="Rotation caméra (°)"
+        value={settings.cameraYaw}
+        min={-180}
+        max={180}
+        step={5}
+        onChange={setCameraYaw}
       />
       <Slider
         label="Hauteur caméra (m)"
@@ -87,74 +81,93 @@ export function SettingsPanel() {
         onChange={setCameraHeight}
       />
 
-      <h3>Relief</h3>
-      <div className="hud-presets">
-        {(Object.keys(LANDSCAPE_PRESETS) as (keyof typeof LANDSCAPE_PRESETS)[]).map((name) => (
-          <button
-            key={name}
-            type="button"
-            className="hud-button"
-            onClick={() => {
-              setDraft(LANDSCAPE_PRESETS[name])
-              regenerate()
-            }}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
-      <Slider
-        label="Amplitude (m)"
-        value={draft.heightScale}
-        min={0}
-        max={150}
-        step={1}
-        onChange={(heightScale) => setDraft({ heightScale })}
-      />
-      <Slider
-        label="Fréquence"
-        value={draft.frequency}
-        min={0.0002}
-        max={0.006}
-        step={0.0001}
-        onChange={(frequency) => setDraft({ frequency })}
-      />
-      <Slider
-        label="Octaves"
-        value={draft.octaves}
-        min={1}
-        max={4}
-        step={1}
-        onChange={(octaves) => setDraft({ octaves })}
-      />
-      <Slider
-        label="Niveau d'eau (m)"
-        value={draft.waterLevel}
-        min={-80}
-        max={20}
-        step={1}
-        onChange={(waterLevel) => setDraft({ waterLevel })}
-      />
-      <Slider
-        label="Espacement des ponts (m)"
-        value={draft.bridgeSpacing}
-        min={500}
-        max={10000}
-        step={250}
-        onChange={(bridgeSpacing) => setDraft({ bridgeSpacing })}
-      />
-      <Slider
-        label="Persistance"
-        value={draft.persistence}
-        min={0.1}
-        max={0.8}
-        step={0.05}
-        onChange={(persistence) => setDraft({ persistence })}
-      />
+      <details className="hud-fold">
+        <summary>Génération</summary>
 
-      <button type="button" className="hud-button" onClick={regenerate}>
-        Régénérer le monde
-      </button>
+        <h3>Graine</h3>
+        <div className="hud-seed">
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={seedDraft}
+            aria-label="Graine"
+            onChange={(e) => setSeedDraft(Number(e.target.value) >>> 0)}
+          />
+          <button type="button" className="hud-button" onClick={randomizeSeed}>
+            Aléatoire
+          </button>
+        </div>
+
+        <h3>Relief</h3>
+        <div className="hud-presets">
+          {(Object.keys(LANDSCAPE_PRESETS) as (keyof typeof LANDSCAPE_PRESETS)[]).map((name) => (
+            <button
+              key={name}
+              type="button"
+              className="hud-button"
+              onClick={() => {
+                setDraft(LANDSCAPE_PRESETS[name])
+                regenerate()
+              }}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+        <Slider
+          label="Amplitude (m)"
+          value={draft.heightScale}
+          min={0}
+          max={150}
+          step={1}
+          onChange={(heightScale) => setDraft({ heightScale })}
+        />
+        <Slider
+          label="Fréquence"
+          value={draft.frequency}
+          min={0.0002}
+          max={0.006}
+          step={0.0001}
+          onChange={(frequency) => setDraft({ frequency })}
+        />
+        <Slider
+          label="Octaves"
+          value={draft.octaves}
+          min={1}
+          max={4}
+          step={1}
+          onChange={(octaves) => setDraft({ octaves })}
+        />
+        <Slider
+          label="Niveau d'eau (m)"
+          value={draft.waterLevel}
+          min={-80}
+          max={20}
+          step={1}
+          onChange={(waterLevel) => setDraft({ waterLevel })}
+        />
+        <Slider
+          label="Espacement des ponts (m)"
+          value={draft.bridgeSpacing}
+          min={500}
+          max={10000}
+          step={250}
+          onChange={(bridgeSpacing) => setDraft({ bridgeSpacing })}
+        />
+        <Slider
+          label="Persistance"
+          value={draft.persistence}
+          min={0.1}
+          max={0.8}
+          step={0.05}
+          onChange={(persistence) => setDraft({ persistence })}
+        />
+
+        <button type="button" className="hud-button" onClick={regenerate}>
+          Régénérer le monde
+        </button>
+      </details>
     </section>
   )
 }

@@ -133,3 +133,15 @@
 .hud-seed .hud-button {
   margin-top: 0;
 }
+
+.hud-fold {
+  margin-top: 8px;
+}
+
+.hud-fold summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 2px 0;
+  user-select: none;
+}

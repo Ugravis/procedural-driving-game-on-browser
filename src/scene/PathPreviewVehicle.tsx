@@ -7,6 +7,7 @@ import { useGameStore } from '../state/gameStore'
 const SPEED_KMH = 27
 const VEHICLE_LIFT = 0.5 // m, au-dessus de la route
 const RAD_TO_DEG = 180 / Math.PI
+const DEG_TO_RAD = Math.PI / 180
 
 // Stand-in pour le futur véhicule (étape 5) : avance le long du chemin à vitesse
 // constante et fait suivre la caméra derrière lui. À remplacer par le vrai
@@ -43,11 +44,16 @@ export function PathPreviewVehicle() {
       mesh.position.copy(target)
       mesh.lookAt(target.clone().add(tangent))
 
-      const { cameraDistance, cameraHeight } = state.settings
+      const { cameraDistance, cameraHeight, cameraYaw } = state.settings
+      const yaw = cameraYaw * DEG_TO_RAD
+      const backX = -forwardX
+      const backZ = -forwardZ
+      const offsetX = backX * Math.cos(yaw) - backZ * Math.sin(yaw)
+      const offsetZ = backX * Math.sin(yaw) + backZ * Math.cos(yaw)
       camera.position.set(
-        target.x - forwardX * cameraDistance,
+        target.x + offsetX * cameraDistance,
         target.y + cameraHeight,
-        target.z - forwardZ * cameraDistance,
+        target.z + offsetZ * cameraDistance,
       )
       camera.lookAt(target)
     }
