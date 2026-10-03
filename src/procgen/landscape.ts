@@ -1,5 +1,5 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
-import { biomeWeights, reliefFactors, setBiomeSeed } from './biomes'
+import { biomeWeights, reliefFactors, seaBedHeight, seaWeight, setBiomeSeed } from './biomes'
 import { createRandom } from './random'
 
 export interface LandscapeParams {
@@ -69,5 +69,7 @@ export function landscapeHeight(x: number, z: number): number {
     frequency *= 2
   }
   const { amplitude: biomeAmplitude, offset } = reliefFactors(biomeWeights(x, z))
-  return (height / norm) * params.heightScale * biomeAmplitude + offset
+  const land = (height / norm) * params.heightScale * biomeAmplitude + offset
+  const sea = seaWeight(x, z)
+  return sea === 0 ? land : land * (1 - sea) + seaBedHeight(land) * sea
 }

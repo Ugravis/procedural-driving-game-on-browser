@@ -36,6 +36,13 @@ const MAP_COLOUR = [
   [122, 116, 104],
 ]
 
+const SEA_FREQUENCY = 1 / 8000 // 1/m, les mers font plusieurs km
+const SEA_THRESHOLD = 0.5 // valeur du bruit au-delà de laquelle la mer commence
+const SEA_WIDTH = 0.15 // largeur de la transition côte / mer
+const SEA_BED = -80 // m, altitude moyenne du fond de mer
+
+let seaNoise: NoiseFunction2D = createNoise2D(createRandom(BIOME_SALT + 20))
+
 let scaleNoises: NoiseFunction2D[] = SCALES.map((_, i) =>
   createNoise2D(createRandom(BIOME_SALT + i)),
 )
@@ -44,6 +51,19 @@ let warpNoise: NoiseFunction2D = createNoise2D(createRandom(BIOME_SALT + 10))
 export function setBiomeSeed(seed: number) {
   scaleNoises = SCALES.map((_, i) => createNoise2D(createRandom(seed + BIOME_SALT + i)))
   warpNoise = createNoise2D(createRandom(seed + BIOME_SALT + 10))
+  seaNoise = createNoise2D(createRandom(seed + BIOME_SALT + 20))
+}
+
+// 0 sur terre, 1 en pleine mer, transition lisse entre les deux (continue).
+export function seaWeight(x: number, z: number): number {
+  const value = seaNoise(x * SEA_FREQUENCY, z * SEA_FREQUENCY)
+  const t = Math.min(Math.max((value - SEA_THRESHOLD) / SEA_WIDTH, 0), 1)
+  return t * t * (3 - 2 * t)
+}
+
+// Altitude du fond de mer, qui garde une partie du relief pour ne pas être plat.
+export function seaBedHeight(landHeight: number): number {
+  return SEA_BED + landHeight * 0.3
 }
 
 // Poids de chaque biome en (x, z), somme égale à 1. Continu, donc les transitions
