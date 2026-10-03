@@ -7,7 +7,7 @@ const GRASS_BAND = 4 // m, bande d'herbe pleine densité au-delà de la marge, d
 const GRASS_FADE = 4 // m, zone de transition où la densité décroît jusqu'à zéro
 const TUFTS_PER_SEGMENT = 6 // touffes tirées par segment de route et par côté
 const SEGMENT_MARGIN = 6 // m, marge autour du chunk pour retrouver les segments qui le croisent
-const TUFT_HALF_WIDTH = 0.6 // m, demi-largeur de la touffe : son centre reste hors de la chaussée
+const TUFT_HALF_WIDTH = 0.4 // m, demi-largeur de la touffe : son centre reste hors de la chaussée
 const ROAD_CLEARANCE = 0.3 // m, marge supplémentaire entre la touffe et le bord
 
 function smoothstep(edge0: number, edge1: number, value: number): number {

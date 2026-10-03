@@ -7,24 +7,36 @@ import { useGameStore } from '../state/gameStore'
 import { KeyboardControls } from '../vehicle/controls'
 import { nextSpeed } from '../vehicle/physics'
 
-const VEHICLE_LIFT = 0.5 // m, au-dessus du sol
+const CAR_WIDTH = 1.8 // m
+const CAR_LENGTH = 4.2 // m
+const WHEEL_RADIUS = 0.35 // m, l'origine du véhicule est au centre des roues
+const WHEEL_WIDTH = 0.25 // m
+const BODY_HEIGHT = 0.55 // m
+const BODY_Y = WHEEL_RADIUS + 0.2 + BODY_HEIGHT / 2 // m, châssis à 20 cm du sol
+const CABIN_WIDTH = 1.5 // m
+const CABIN_LENGTH = 2.0 // m
+const CABIN_HEIGHT = 0.55 // m
+const CABIN_Y = BODY_Y + BODY_HEIGHT / 2 + CABIN_HEIGHT / 2
+const CABIN_Z = -0.2 // m, habitacle légèrement vers l'arrière
+const LIGHT_Y = BODY_Y // m, hauteur des feux
+const VEHICLE_LIFT = WHEEL_RADIUS // m, origine au centre des roues, au-dessus du sol
 const TURN_RATE = 1.2 // rad/s, braquage à pleine vitesse
 const FULL_STEER_SPEED = 5 // m/s, en dessous le braquage est réduit
 const ON_ROAD_DISTANCE = 30 // m, au-delà on considère qu'on a quitté la route
 const GRADE_SAMPLE = 2 // m, distance d'échantillonnage de la pente devant
 const RAD_TO_DEG = 180 / Math.PI
 const WHEEL_POSITIONS: [number, number][] = [
-  [0.5, 0.7],
-  [-0.5, 0.7],
-  [0.5, -0.7],
-  [-0.5, -0.7],
+  [CAR_WIDTH / 2 - 0.05, 1.45],
+  [-(CAR_WIDTH / 2 - 0.05), 1.45],
+  [CAR_WIDTH / 2 - 0.05, -1.45],
+  [-(CAR_WIDTH / 2 - 0.05), -1.45],
 ]
 const MS_TO_KMH = 3.6
 const HEADLIGHT_OFF = 0.1
 const HEADLIGHT_ON = 1.5
 const BEAM_INTENSITY = 60 // candela, faisceau des projecteurs allumés
 const BEAM_REACH = 80 // m
-const BEAM_X = [0.35, -0.35]
+const BEAM_X = [0.6, -0.6]
 const REARLIGHT_OFF = 0.2
 const REARLIGHT_ON = 2
 
@@ -151,24 +163,24 @@ export function Vehicle() {
 
   return (
     <group ref={meshRef}>
-      <mesh castShadow position={[0, 0, 0]}>
-        <boxGeometry args={[1, 0.45, 2.2]} />
+      <mesh castShadow position={[0, BODY_Y, 0]}>
+        <boxGeometry args={[CAR_WIDTH, BODY_HEIGHT, CAR_LENGTH]} />
         <meshStandardMaterial color="orange" />
       </mesh>
-      <mesh castShadow position={[0, 0.42, -0.2]}>
-        <boxGeometry args={[0.9, 0.4, 1.1]} />
+      <mesh castShadow position={[0, CABIN_Y, CABIN_Z]}>
+        <boxGeometry args={[CABIN_WIDTH, CABIN_HEIGHT, CABIN_LENGTH]} />
         <meshStandardMaterial color="orange" />
       </mesh>
       {WHEEL_POSITIONS.map(([x, z], i) => (
-        <mesh key={i} castShadow position={[x, -0.2, z]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.3, 0.3, 0.22, 12]} />
+        <mesh key={i} castShadow position={[x, 0, z]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[WHEEL_RADIUS, WHEEL_RADIUS, WHEEL_WIDTH, 12]} />
           <meshStandardMaterial color="#1e1e1e" />
         </mesh>
       ))}
       {BEAM_X.map((x, i) => (
         <group key={`beam-${x}`}>
           <spotLight
-            position={[x, 0.05, 1.2]}
+            position={[x, LIGHT_Y, CAR_LENGTH / 2]}
             target={beamTargets[i]!}
             intensity={lightsOn ? BEAM_INTENSITY : 0}
             angle={0.45}
@@ -180,15 +192,15 @@ export function Vehicle() {
           <primitive object={beamTargets[i]!} position={[x, 0, BEAM_REACH / 2]} />
         </group>
       ))}
-      {[0.35, -0.35].map((x) => (
-        <mesh key={`head-${x}`} position={[x, 0.05, 1.11]}>
-          <boxGeometry args={[0.2, 0.12, 0.02]} />
+      {BEAM_X.map((x) => (
+        <mesh key={`head-${x}`} position={[x, LIGHT_Y, CAR_LENGTH / 2 + 0.01]}>
+          <boxGeometry args={[0.3, 0.15, 0.02]} />
           <meshStandardMaterial color="#fff6c8" emissive="#fff6c8" emissiveIntensity={headlight} />
         </mesh>
       ))}
-      {[0.35, -0.35].map((x) => (
-        <mesh key={`tail-${x}`} position={[x, 0.05, -1.11]}>
-          <boxGeometry args={[0.2, 0.12, 0.02]} />
+      {BEAM_X.map((x) => (
+        <mesh key={`tail-${x}`} position={[x, LIGHT_Y, -CAR_LENGTH / 2 - 0.01]}>
+          <boxGeometry args={[0.3, 0.15, 0.02]} />
           <meshStandardMaterial color="#c81e1e" emissive="#ff1a1a" emissiveIntensity={rearlight} />
         </mesh>
       ))}

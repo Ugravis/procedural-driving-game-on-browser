@@ -7,8 +7,8 @@ import {
 } from 'three'
 import { SEASON_PALETTES, type Season } from './seasons'
 
-const TREE_WIDTH = 2 // m
-const TREE_HEIGHT = 3 // m, le pied de l'arbre est à y = 0
+const TREE_WIDTH = 6.6 // m, couronne d'un conifère
+const TREE_HEIGHT = 10 // m, le pied de l'arbre est à y = 0
 
 // Le vertex shader oriente le plan vers la caméra autour de l'axe Y : un seul
 // plan par arbre, sans recalcul CPU à chaque frame.
