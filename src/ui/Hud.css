@@ -120,17 +120,46 @@
   color: white;
 }
 
-.hud-minimap {
+.hud-minimap-wrap {
   position: absolute;
   right: 16px;
   bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.hud-minimap-wrap.is-expanded {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.hud-minimap-label {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(20, 30, 20, 0.8);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-minimap-biome {
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.hud-minimap {
+  position: relative;
   border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 4px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-.hud-minimap {
   pointer-events: auto;
   cursor: pointer;
 }
@@ -142,24 +171,14 @@
 }
 
 .hud-minimap.is-expanded {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  right: auto;
-  bottom: auto;
-  transform: translate(-50%, -50%);
+  cursor: grab;
+  touch-action: none;
   border: 3px solid rgba(255, 255, 255, 0.85);
-  z-index: 10;
 }
 
 .hud-minimap.is-expanded canvas {
   width: min(640px, 80vmin);
   height: min(640px, 80vmin);
-}
-
-.hud-minimap.is-expanded {
-  cursor: grab;
-  touch-action: none;
 }
 
 .hud-minimap-controls {

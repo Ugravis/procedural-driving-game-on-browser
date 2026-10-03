@@ -1,4 +1,5 @@
 import { BufferGeometry, Float32BufferAttribute } from 'three'
+import { biomeWeights, soilTint } from './biomes'
 import { landscapeHeight } from './landscape'
 import { ROAD_HALF_WIDTH, type ProceduralPath } from './pathGenerator'
 
@@ -37,6 +38,7 @@ export function buildChunkGeometry(
   const segments = CHUNK_RESOLUTION
   const verticesPerSide = segments + 1
   const positions: number[] = []
+  const colors: number[] = []
   const indices: number[] = []
 
   const originX = chunkX * CHUNK_SIZE
@@ -48,8 +50,11 @@ export function buildChunkGeometry(
       const localZ = (iz / segments) * CHUNK_SIZE - CHUNK_SIZE / 2
       // Hauteur échantillonnée en coordonnées monde : deux chunks voisins
       // calculent la même hauteur à leur frontière commune, pas de couture.
-      const y = heightAt(originX + localX, originZ + localZ, path)
+      const worldX = originX + localX
+      const worldZ = originZ + localZ
+      const y = heightAt(worldX, worldZ, path)
       positions.push(localX, y, localZ)
+      colors.push(...soilTint(biomeWeights(worldX, worldZ)))
     }
   }
 
@@ -66,6 +71,7 @@ export function buildChunkGeometry(
   const geometry = new BufferGeometry()
   geometry.setIndex(indices)
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('color', new Float32BufferAttribute(colors, 3))
   geometry.computeVertexNormals()
   return geometry
 }

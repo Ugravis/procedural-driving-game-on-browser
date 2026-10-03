@@ -88,6 +88,7 @@ export function terrainMaterial(season: Season, lookMode: boolean): MeshStandard
       new MeshStandardMaterial({
         color: palette.ground,
         flatShading: lookMode,
+        vertexColors: true,
       }),
       palette.snowCover,
     )

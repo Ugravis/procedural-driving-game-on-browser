@@ -1,6 +1,7 @@
 import { useGameStore } from '../state/gameStore'
 import { LANDSCAPE_PRESETS } from '../procgen/landscape'
 import { SEASONS } from '../scene/seasons'
+import { BIOMES } from '../procgen/biomes'
 
 interface SliderProps {
   label: string
@@ -40,6 +41,7 @@ export function SettingsPanel() {
   const setCameraHeight = useGameStore((s) => s.setCameraHeight)
   const setCameraYaw = useGameStore((s) => s.setCameraYaw)
   const setSeedDraft = useGameStore((s) => s.setSeedDraft)
+  const teleportToBiome = useGameStore((s) => s.teleportToBiome)
   const setDraft = useGameStore((s) => s.setLandscapeDraft)
   const regenerate = useGameStore((s) => s.regenerate)
   const randomizeSeed = useGameStore((s) => s.randomizeSeed)
@@ -113,6 +115,20 @@ export function SettingsPanel() {
           <button type="button" className="hud-button" onClick={randomizeSeed}>
             Aléatoire
           </button>
+        </div>
+
+        <h3>Biomes (tests)</h3>
+        <div className="hud-presets">
+          {BIOMES.map((name, index) => (
+            <button
+              key={name}
+              type="button"
+              className="hud-button"
+              onClick={() => teleportToBiome(index)}
+            >
+              {name}
+            </button>
+          ))}
         </div>
 
         <h3>Relief</h3>
