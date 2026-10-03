@@ -87,6 +87,7 @@ export class ProceduralPath {
   private windowLast = Number.NaN
   private window: PathPoint[] = []
   private dense: Vector3[] = []
+  private denseBridge: boolean[] = []
   private curve = new CatmullRomCurve3()
   revision = 0
 
@@ -122,6 +123,10 @@ export class ProceduralPath {
 
   getCurve(): CatmullRomCurve3 {
     return this.curve
+  }
+
+  getCentreline(): { points: readonly Vector3[]; bridge: readonly boolean[] } {
+    return { points: this.dense, bridge: this.denseBridge }
   }
 
   getWindow(): readonly PathPoint[] {
@@ -204,6 +209,7 @@ export class ProceduralPath {
     }
     this.curve = new CatmullRomCurve3(this.window.map((p) => p.position))
     this.dense = this.curve.getSpacedPoints(this.window.length * DENSE_PER_POINT)
+    this.denseBridge = this.dense.map((p) => this.nearestPoint(p.x, p.z).bridge)
     return true
   }
 
