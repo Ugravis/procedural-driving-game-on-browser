@@ -50,7 +50,6 @@ export const SEASON_PALETTES: Record<Season, SeasonPalette> = {
 
 const SNOW_COLOR = new Color('#f2f6fa')
 const terrainMaterials = new Map<string, MeshStandardMaterial>()
-const foliageMaterials = new Map<string, MeshStandardMaterial>()
 
 // Neige sur le sol : la couverture ne tient que sur les surfaces presque
 // horizontales, et disparaît sur les pentes fortes (comme en réalité).
@@ -93,19 +92,6 @@ export function terrainMaterial(season: Season, lookMode: boolean): MeshStandard
       palette.snowCover,
     )
     terrainMaterials.set(key, material)
-  }
-  return material
-}
-
-export function foliageMaterial(season: Season, lookMode: boolean): MeshStandardMaterial {
-  const key = `${season}:${lookMode}`
-  let material = foliageMaterials.get(key)
-  if (!material) {
-    material = new MeshStandardMaterial({
-      color: SEASON_PALETTES[season].foliage,
-      flatShading: lookMode,
-    })
-    foliageMaterials.set(key, material)
   }
   return material
 }
