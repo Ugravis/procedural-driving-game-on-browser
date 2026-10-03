@@ -20,6 +20,10 @@ const WHEEL_POSITIONS: [number, number][] = [
   [-0.5, -0.7],
 ]
 const MS_TO_KMH = 3.6
+const HEADLIGHT_OFF = 0.1
+const HEADLIGHT_ON = 1.5
+const REARLIGHT_OFF = 0.2
+const REARLIGHT_ON = 2
 
 // Véhicule en conduite libre : position et cap, la hauteur vient du terrain.
 // La route est un chemin praticable, pas un rail. Le tracé est généré jusqu'à
@@ -70,7 +74,13 @@ export function Vehicle() {
     )
     const grade = (ahead - here) / GRADE_SAMPLE
 
-    p.speed = nextSpeed(p.speed, controls.throttle(), grade, delta)
+    const handbrake = controls.handbrake()
+    const throttle = handbrake ? 0 : controls.throttle()
+    p.speed = nextSpeed(p.speed, throttle, grade, delta, handbrake)
+    if (controls.consumeLightsToggle()) state.toggleLights()
+    if (state.handbrake !== handbrake || state.braking !== (handbrake || throttle < 0)) {
+      state.setDriveState(handbrake, handbrake || throttle < 0)
+    }
     if (Math.abs(p.speed) > 0.01) {
       const turnAuthority = Math.min(Math.abs(p.speed) / FULL_STEER_SPEED, 1)
       p.heading += controls.steer() * TURN_RATE * turnAuthority * Math.sign(p.speed) * delta
@@ -130,6 +140,11 @@ export function Vehicle() {
     }
   })
 
+  const lightsOn = useGameStore((s) => s.lightsOn)
+  const braking = useGameStore((s) => s.braking)
+  const headlight = lightsOn ? HEADLIGHT_ON : HEADLIGHT_OFF
+  const rearlight = lightsOn || braking ? REARLIGHT_ON : REARLIGHT_OFF
+
   return (
     <group ref={meshRef}>
       <mesh castShadow position={[0, 0, 0]}>
@@ -138,7 +153,7 @@ export function Vehicle() {
       </mesh>
       <mesh castShadow position={[0, 0.42, -0.2]}>
         <boxGeometry args={[0.9, 0.4, 1.1]} />
-        <meshStandardMaterial color="#2b3a42" />
+        <meshStandardMaterial color="orange" />
       </mesh>
       {WHEEL_POSITIONS.map(([x, z], i) => (
         <mesh key={i} castShadow position={[x, -0.2, z]} rotation={[0, 0, Math.PI / 2]}>
@@ -146,14 +161,18 @@ export function Vehicle() {
           <meshStandardMaterial color="#1e1e1e" />
         </mesh>
       ))}
-      <mesh position={[0.35, 0.05, 1.11]}>
-        <boxGeometry args={[0.2, 0.12, 0.02]} />
-        <meshStandardMaterial color="#fff6c8" emissive="#fff6c8" emissiveIntensity={0.6} />
-      </mesh>
-      <mesh position={[-0.35, 0.05, 1.11]}>
-        <boxGeometry args={[0.2, 0.12, 0.02]} />
-        <meshStandardMaterial color="#fff6c8" emissive="#fff6c8" emissiveIntensity={0.6} />
-      </mesh>
+      {[0.35, -0.35].map((x) => (
+        <mesh key={`head-${x}`} position={[x, 0.05, 1.11]}>
+          <boxGeometry args={[0.2, 0.12, 0.02]} />
+          <meshStandardMaterial color="#fff6c8" emissive="#fff6c8" emissiveIntensity={headlight} />
+        </mesh>
+      ))}
+      {[0.35, -0.35].map((x) => (
+        <mesh key={`tail-${x}`} position={[x, 0.05, -1.11]}>
+          <boxGeometry args={[0.2, 0.12, 0.02]} />
+          <meshStandardMaterial color="#c81e1e" emissive="#ff1a1a" emissiveIntensity={rearlight} />
+        </mesh>
+      ))}
     </group>
   )
 }

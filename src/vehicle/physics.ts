@@ -6,14 +6,22 @@ const ROLLING_RESISTANCE = 0.15 // m/s², freinage passif
 const AERO_DRAG = 0.0006 // 1/m
 const GRAVITY = 9.81 // m/s²
 const STOP_THRESHOLD = 0.05 // m/s, en dessous, le véhicule est à l'arrêt
+const HANDBRAKE_DECELERATION = 12 // m/s², frein à main serré
 
 /**
  * Vitesse signée le long du tracé (positive = sens du tracé).
  * throttle : -1 (frein / marche arrière) à 1 (accélérateur), dans le sens du tracé.
  * grade : pente le long du tracé, en fraction (0,1 = 10 %).
  */
-export function nextSpeed(speed: number, throttle: number, grade: number, dt: number): number {
+export function nextSpeed(
+  speed: number,
+  throttle: number,
+  grade: number,
+  dt: number,
+  handbrake = false,
+): number {
   let acceleration = -GRAVITY * grade - AERO_DRAG * speed * Math.abs(speed)
+  if (handbrake && speed !== 0) acceleration -= Math.sign(speed) * HANDBRAKE_DECELERATION
 
   if (throttle > 0) {
     const headroom = Math.max(0, 1 - Math.max(speed, 0) / MAX_SPEED)
