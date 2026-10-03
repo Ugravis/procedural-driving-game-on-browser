@@ -39,13 +39,15 @@ export function Minimap() {
   }, [view])
 
   useEffect(() => {
-    if (!expanded) return
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setExpanded(false)
+      if (event.target instanceof HTMLInputElement) return
+      const key = event.key.toLowerCase()
+      if (key === 'm') setExpanded((value) => !value)
+      else if (key === 'escape') setExpanded(false)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [expanded])
+  }, [])
 
   return (
     <div
