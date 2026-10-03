@@ -32,6 +32,7 @@ export function ChunkVegetation({ chunkX, chunkZ }: ChunkVegetationProps) {
       mesh.setMatrixAt(i, dummy.matrix)
     })
     mesh.instanceMatrix.needsUpdate = true
+    mesh.computeBoundingSphere()
   }, [instances])
 
   if (instances.length === 0) return null
