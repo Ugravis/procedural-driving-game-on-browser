@@ -6,37 +6,6 @@
   pointer-events: none;
 }
 
-.hud-speed {
-  position: absolute;
-  right: 24px;
-  bottom: 24px;
-  font-size: 2rem;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-}
-
-.hud-debug {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  pointer-events: auto;
-}
-
-.hud-debug button {
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.hud-debug-panel {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
-}
-
 .hud-bottom-left {
   position: absolute;
   left: 16px;

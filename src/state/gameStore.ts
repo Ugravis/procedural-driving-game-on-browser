@@ -22,7 +22,6 @@ export interface DebugState {
 }
 
 export interface SettingsState {
-  debugOverlay: boolean
   showContours: boolean
   drivingReverse: boolean
   cameraDistance: number // m, recul de la caméra derrière le véhicule
@@ -47,7 +46,6 @@ interface GameStore {
   ) => void
   setFps: (fps: number) => void
   setPathPointCount: (count: number) => void
-  toggleDebugOverlay: () => void
   toggleContours: () => void
   toggleDrivingReverse: () => void
   setCameraDistance: (value: number) => void
@@ -86,7 +84,6 @@ export const useGameStore = create<GameStore>()(
     player: { position: [0, 0, 0], speed: 0, distanceTraveled: 0, grade: 0, heading: 0 },
     debug: { fps: 0, pathPointCount: 0 },
     settings: {
-      debugOverlay: false,
       showContours: false,
       drivingReverse: false,
       cameraDistance: 11,
@@ -101,8 +98,6 @@ export const useGameStore = create<GameStore>()(
       set({ player: { position, speed, distanceTraveled, grade, heading } }),
     setFps: (fps) => set((s) => ({ debug: { ...s.debug, fps } })),
     setPathPointCount: (pathPointCount) => set((s) => ({ debug: { ...s.debug, pathPointCount } })),
-    toggleDebugOverlay: () =>
-      set((s) => ({ settings: { ...s.settings, debugOverlay: !s.settings.debugOverlay } })),
     toggleContours: () =>
       set((s) => ({ settings: { ...s.settings, showContours: !s.settings.showContours } })),
     toggleDrivingReverse: () =>
