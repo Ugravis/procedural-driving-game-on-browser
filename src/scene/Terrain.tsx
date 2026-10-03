@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { proceduralPath } from '../procgen/pathGenerator'
 import { CHUNK_SIZE, RENDER_RADIUS_CHUNKS } from '../procgen/terrain'
 import { useGameStore } from '../state/gameStore'
+import { ChunkGrass } from './ChunkGrass'
 import { ChunkVegetation } from './ChunkVegetation'
 import { TerrainChunk } from './TerrainChunk'
 
@@ -78,6 +79,9 @@ export function Terrain() {
       ))}
       {visibleChunks.map(({ key, chunkX, chunkZ }) => (
         <ChunkVegetation key={key} chunkX={chunkX} chunkZ={chunkZ} />
+      ))}
+      {visibleChunks.map(({ key, chunkX, chunkZ }) => (
+        <ChunkGrass key={key} chunkX={chunkX} chunkZ={chunkZ} />
       ))}
     </>
   )
