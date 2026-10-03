@@ -41,7 +41,7 @@ export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
     <group position={position}>
       <mesh geometry={geometry} receiveShadow material={terrainMaterial(season, lookMode)} />
       <mesh geometry={roadGeometry} receiveShadow>
-        <meshStandardMaterial color="#3a3f44" polygonOffset polygonOffsetFactor={-2} />
+        <meshStandardMaterial vertexColors polygonOffset polygonOffsetFactor={-2} />
       </mesh>
       {contours && (
         <lineSegments geometry={contours}>

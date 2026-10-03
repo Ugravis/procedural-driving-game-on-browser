@@ -20,6 +20,7 @@ const LAND = '#4d6b3b'
 const WATER = '#1f4e6b'
 const CONTOUR = 'rgba(210, 225, 180, 0.55)'
 const ROAD = '#f2f2f2'
+const DIRT = '#c9a66b'
 const BRIDGE = '#ff2bd6'
 
 interface Pan {
@@ -202,18 +203,19 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView, pan: Pan)
   const lineWidth = view === EXPANDED ? 3 : 2
   context.lineWidth = lineWidth
   context.lineCap = 'round'
-  context.strokeStyle = ROAD
-  context.beginPath()
-  for (const { a, b } of proceduralPath.segmentsIn(
-    originX,
-    originX + 2 * range,
-    originZ,
-    originZ + 2 * range,
-  )) {
-    context.moveTo(toPixelX(a.x), toPixelZ(a.z))
-    context.lineTo(toPixelX(b.x), toPixelZ(b.z))
+  const road = proceduralPath.segmentsIn(originX, originX + 2 * range, originZ, originZ + 2 * range)
+  for (const [dirt, colour] of [
+    [false, ROAD],
+    [true, DIRT],
+  ] as const) {
+    context.strokeStyle = colour
+    context.beginPath()
+    for (const { a, b } of road.filter((segment) => segment.dirt === dirt)) {
+      context.moveTo(toPixelX(a.x), toPixelZ(a.z))
+      context.lineTo(toPixelX(b.x), toPixelZ(b.z))
+    }
+    context.stroke()
   }
-  context.stroke()
 
   context.strokeStyle = BRIDGE
   context.beginPath()

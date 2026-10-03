@@ -39,6 +39,16 @@ const SPAWN_SEARCH_LENGTH = 4000 // m, distance explorée pour trouver un dépar
 const SPAWN_MAX_SLOPE = 0.03 // pente max au départ (3 %)
 const SPAWN_WATER_MARGIN = 3 // m, hauteur minimale au-dessus de l'eau au départ
 
+const BRANCH_SPACING = 2000 // m, une piste au plus par tranche de cette longueur
+const BRANCH_PROBABILITY = 0.9 // probabilité qu'une tranche contienne une piste
+const BRANCH_RETURN_OPTIONS = [100, 80, 120] // pas de 10 m entre le croisement et le raccord : ~1 km
+const BRANCH_RETURN_MAX = 120
+const BRANCH_MAX_STEPS = 400
+const BRANCH_JOIN_DISTANCE = 15 // m, la piste est raccordée à moins de cette distance du point de raccord
+const BRANCH_JOIN_SKIP = 25 // m, pas de contrôle de collision avec la route près du croisement et du raccord
+const DIRT_MAX_GRADE = 0.18 // pente max d'une piste
+const BRANCH_SALT = 3
+
 const WANDER_SALT = 1
 const DIRECTION_SALT = 2
 
@@ -59,6 +69,11 @@ export interface Sample {
 export interface RoadSegment {
   a: Sample
   b: Sample
+  dirt: boolean // vrai pour une piste en terre
+}
+
+interface BranchSegment extends RoadSegment {
+  arc: number // distance le long de la route principale du croisement
 }
 
 interface Candidate {
@@ -104,6 +119,10 @@ export class ProceduralPath {
   private lastBridge = { forward: -Infinity, backward: -Infinity }
   private visited = new Map<string, Visited[]>()
   private samples = new Map<number, Sample>() // indexé par distance / SAMPLE_SPACING
+  private branchSegments: BranchSegment[] = []
+  private branchCells = new Map<string, number[]>()
+  private nextBranchBucket = 0
+  private seed = 0
   private sampleCells = new Map<string, number[]>()
   private newSamples: { x: number; z: number }[] = []
   private segmentLow = 0 // plus petit segment de contrôle échantillonné
@@ -115,6 +134,10 @@ export class ProceduralPath {
   }
 
   reset(seed: number) {
+    this.seed = seed
+    this.branchSegments = []
+    this.branchCells = new Map()
+    this.nextBranchBucket = 0
     this.wander2D = createNoise2D(createRandom(seed + WANDER_SALT))
     this.direction2D = createNoise2D(createRandom(seed + DIRECTION_SALT))
     const origin: ControlPoint = {
@@ -192,6 +215,30 @@ export class ProceduralPath {
         }
       }
     }
+    for (let i = cx - 2; i <= cx + 2; i++) {
+      for (let j = cz - 2; j <= cz + 2; j++) {
+        for (const index of this.branchCells.get(`${i}:${j}`) ?? []) {
+          const segment = this.branchSegments[index]!
+          const { a, b } = segment
+          const abx = b.x - a.x
+          const abz = b.z - a.z
+          const lengthSq = abx * abx + abz * abz
+          const t =
+            lengthSq > 0
+              ? Math.min(Math.max(((x - a.x) * abx + (z - a.z) * abz) / lengthSq, 0), 1)
+              : 0
+          const dx = a.x + abx * t - x
+          const dz = a.z + abz * t - z
+          const distSq = dx * dx + dz * dz
+          if (distSq < bestDistSq) {
+            bestDistSq = distSq
+            height = a.y + (b.y - a.y) * t
+            bridge = false
+            arc = segment.arc
+          }
+        }
+      }
+    }
     return { height, distance: Math.sqrt(bestDistSq), bridge, arc }
   }
 
@@ -239,8 +286,15 @@ export class ProceduralPath {
       const a = this.samples.get(index)
       const b = this.samples.get(index + 1)
       if (!a || !b || (a.bridge && b.bridge)) continue
-      segments.push({ a, b })
+      segments.push({ a, b, dirt: false })
     }
+    const branchIndices = new Set<number>()
+    for (let i = Math.floor(minX / GRID_CELL); i <= Math.floor(maxX / GRID_CELL); i++) {
+      for (let j = Math.floor(minZ / GRID_CELL); j <= Math.floor(maxZ / GRID_CELL); j++) {
+        for (const index of this.branchCells.get(`${i}:${j}`) ?? []) branchIndices.add(index)
+      }
+    }
+    for (const index of branchIndices) segments.push(this.branchSegments[index]!)
     return segments
   }
 
@@ -249,7 +303,7 @@ export class ProceduralPath {
     const segments: RoadSegment[] = []
     for (const [index, a] of this.samples) {
       const b = this.samples.get(index + 1)
-      if (b && a.bridge && b.bridge) segments.push({ a, b })
+      if (b && a.bridge && b.bridge) segments.push({ a, b, dirt: false })
     }
     return segments
   }
@@ -320,6 +374,7 @@ export class ProceduralPath {
     while (this.forward.length <= count) {
       this.grow(1)
       this.grow(-1)
+      this.spawnBranches()
       grew = true
     }
     if (grew) this.sampleSegments()
@@ -541,6 +596,128 @@ export class ProceduralPath {
       obstacle: underWater || steep,
       underWater,
     }
+  }
+
+  private bucketRandom(bucket: number, salt: number): number {
+    return createRandom(this.seed + BRANCH_SALT + bucket * 7919 + salt * 104729)()
+  }
+
+  private spawnBranches() {
+    for (;;) {
+      const bucket = this.nextBranchBucket
+      const junction = Math.round(
+        (bucket * BRANCH_SPACING + 500 + this.bucketRandom(bucket, 0) * (BRANCH_SPACING - 1000)) /
+          SEGMENT_LENGTH,
+      )
+      if (this.forward.length <= junction + BRANCH_RETURN_MAX) return
+      this.nextBranchBucket++
+      if (this.bucketRandom(bucket, 1) < BRANCH_PROBABILITY) this.tryBranch(junction, bucket)
+    }
+  }
+
+  // Piste en terre : part du croisement vers un côté de la route, puis se dirige
+  // vers un point de raccord ~1 km plus loin. Plusieurs raccords et côtés sont
+  // essayés dans un ordre fixe ; la première piste valide est gardée.
+  private tryBranch(junction: number, bucket: number) {
+    const side = this.bucketRandom(bucket, 2) < 0.5 ? -1 : 1
+    const sideOffset = 1.1 + this.bucketRandom(bucket, 3) * 0.4
+    for (const returnSteps of BRANCH_RETURN_OPTIONS) {
+      if (this.forward.length <= junction + returnSteps) return
+      for (const sign of [side, -side]) {
+        if (this.attemptBranch(junction, returnSteps, sign * sideOffset)) return
+      }
+    }
+  }
+
+  private attemptBranch(junction: number, returnSteps: number, turnOff: number): boolean {
+    const origin = this.forward[junction]!.position
+    const before = this.forward[junction - 1]!.position
+    const mainHeading = Math.atan2(origin.x - before.x, -(origin.z - before.z))
+    let heading = mainHeading + turnOff
+    const join = this.forward[junction + returnSteps]!.position
+
+    const points: Vector3[] = [origin]
+    let current = origin
+    let joined = false
+    for (let step = 0; step < BRANCH_MAX_STEPS && !joined; step++) {
+      if (Math.hypot(current.x - join.x, current.z - join.z) < BRANCH_JOIN_DISTANCE) {
+        points.push(join)
+        joined = true
+        break
+      }
+      const next = this.branchStep(current, heading, join, points, origin)
+      if (!next) return false
+      points.push(next.position)
+      heading = next.heading
+      current = next.position
+    }
+    if (!joined || !this.branchWithinGrade(points)) return false
+    this.addBranch(points, junction * SEGMENT_LENGTH)
+    return true
+  }
+
+  private branchWithinGrade(points: Vector3[]): boolean {
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i]!
+      const b = points[i + 1]!
+      if (Math.abs(b.y - a.y) / Math.hypot(b.x - a.x, b.z - a.z) > DIRT_MAX_GRADE) return false
+    }
+    return true
+  }
+
+  private branchStep(
+    from: Vector3,
+    heading: number,
+    join: Vector3,
+    points: Vector3[],
+    origin: Vector3,
+  ): { heading: number; position: Vector3 } | null {
+    const waterLevel = getLandscapeParams().waterLevel
+    let best: { heading: number; position: Vector3; cost: number } | null = null
+    for (const turn of CANDIDATE_TURNS) {
+      const h = heading + turn
+      const x = from.x + Math.sin(h) * SEGMENT_LENGTH
+      const z = from.z - Math.cos(h) * SEGMENT_LENGTH
+      const y = landscapeHeight(x, z)
+      const slope = (y - from.y) / SEGMENT_LENGTH
+      let cost = Math.hypot(x - join.x, z - join.z) / SEGMENT_LENGTH + Math.abs(turn) * 0.3
+      if (Math.abs(slope) > DIRT_MAX_GRADE) cost += STEEP_PENALTY
+      if (y < waterLevel) cost += WATER_PENALTY
+      if (this.branchCollides(x, z, points, origin, join)) cost += COLLISION_PENALTY
+      if (!best || cost < best.cost) best = { heading: h, position: new Vector3(x, y, z), cost }
+    }
+    return best && best.cost < COLLISION_PENALTY ? best : null
+  }
+
+  private branchCollides(x: number, z: number, points: Vector3[], origin: Vector3, join: Vector3) {
+    for (let i = 0; i < points.length - 10; i++) {
+      const p = points[i]!
+      if (Math.hypot(p.x - x, p.z - z) < CLEARANCE) return true
+    }
+    const nearJunction = Math.hypot(x - origin.x, z - origin.z) < BRANCH_JOIN_SKIP
+    const nearJoin = Math.hypot(x - join.x, z - join.z) < BRANCH_JOIN_SKIP
+    return !nearJunction && !nearJoin && this.collides(x, z, Infinity)
+  }
+
+  private addBranch(points: Vector3[], arc: number) {
+    for (let i = 0; i < points.length - 1; i++) {
+      const pa = points[i]!
+      const pb = points[i + 1]!
+      const a: Sample = { x: pa.x, y: pa.y, z: pa.z, bridge: false }
+      const b: Sample = { x: pb.x, y: pb.y, z: pb.z, bridge: false }
+      const index = this.branchSegments.length
+      this.branchSegments.push({ a, b, dirt: true, arc })
+      for (const key of new Set([cellKey(pa.x, pa.z), cellKey(pb.x, pb.z)])) {
+        const cell = this.branchCells.get(key)
+        if (cell) cell.push(index)
+        else this.branchCells.set(key, [index])
+      }
+    }
+    for (const p of points) {
+      this.recordVisited(p, Infinity)
+      this.newSamples.push({ x: p.x, z: p.z })
+    }
+    this.revision++
   }
 
   private recordVisited(position: Vector3, distance: number) {
