@@ -114,3 +114,8 @@
   padding: 2px 0;
   user-select: none;
 }
+
+.hud-button.is-active {
+  background: #2d6a4f;
+  color: white;
+}

@@ -1,5 +1,6 @@
 import { useGameStore } from '../state/gameStore'
 import { LANDSCAPE_PRESETS } from '../procgen/landscape'
+import { SEASONS } from '../scene/seasons'
 
 interface SliderProps {
   label: string
@@ -35,6 +36,7 @@ export function SettingsPanel() {
   const toggleContours = useGameStore((s) => s.toggleContours)
   const toggleDrivingReverse = useGameStore((s) => s.toggleDrivingReverse)
   const toggleLookMode = useGameStore((s) => s.toggleLookMode)
+  const setSeason = useGameStore((s) => s.setSeason)
   const setCameraDistance = useGameStore((s) => s.setCameraDistance)
   const setCameraHeight = useGameStore((s) => s.setCameraHeight)
   const setCameraYaw = useGameStore((s) => s.setCameraYaw)
@@ -61,6 +63,20 @@ export function SettingsPanel() {
         <input type="checkbox" checked={settings.lookMode} onChange={toggleLookMode} />
         Ambiance ombrée (test)
       </label>
+
+      <h3>Saison</h3>
+      <div className="hud-presets">
+        {SEASONS.map((name) => (
+          <button
+            key={name}
+            type="button"
+            className={`hud-button${settings.season === name ? ' is-active' : ''}`}
+            onClick={() => setSeason(name)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
 
       <Slider
         label="Recul caméra (m)"
