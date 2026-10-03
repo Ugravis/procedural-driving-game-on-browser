@@ -56,6 +56,31 @@ export function SettingsPanel() {
         Rouler en arrière
       </label>
 
+      <Slider
+        label="Recul caméra (m)"
+        value={settings.cameraDistance}
+        min={4}
+        max={150}
+        step={1}
+        onChange={setCameraDistance}
+      />
+      <Slider
+        label="Rotation caméra (°)"
+        value={settings.cameraYaw}
+        min={-180}
+        max={180}
+        step={5}
+        onChange={setCameraYaw}
+      />
+      <Slider
+        label="Hauteur caméra (m)"
+        value={settings.cameraHeight}
+        min={1}
+        max={12}
+        step={0.5}
+        onChange={setCameraHeight}
+      />
+
       <details className="hud-fold">
         <summary>Génération</summary>
 
@@ -73,31 +98,6 @@ export function SettingsPanel() {
             Aléatoire
           </button>
         </div>
-
-        <Slider
-          label="Recul caméra (m)"
-          value={settings.cameraDistance}
-          min={4}
-          max={150}
-          step={1}
-          onChange={setCameraDistance}
-        />
-        <Slider
-          label="Rotation caméra (°)"
-          value={settings.cameraYaw}
-          min={-180}
-          max={180}
-          step={5}
-          onChange={setCameraYaw}
-        />
-        <Slider
-          label="Hauteur caméra (m)"
-          value={settings.cameraHeight}
-          min={1}
-          max={12}
-          step={0.5}
-          onChange={setCameraHeight}
-        />
 
         <h3>Relief</h3>
         <div className="hud-presets">
