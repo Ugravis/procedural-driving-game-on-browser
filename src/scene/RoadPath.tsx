@@ -1,17 +1,16 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import { TubeGeometry, type Mesh } from 'three'
-import { proceduralPath } from '../procgen/pathGenerator'
+import { proceduralPath, ROAD_HALF_WIDTH } from '../procgen/pathGenerator'
 import { useGameStore } from '../state/gameStore'
 
-const ROAD_RADIUS = 1.2
 const RADIAL_SEGMENTS = 8
 
 function buildGeometry() {
   return new TubeGeometry(
     proceduralPath.getCurve(),
     Math.max(proceduralPath.pointCount * 2, 16),
-    ROAD_RADIUS,
+    ROAD_HALF_WIDTH,
     RADIAL_SEGMENTS,
     false,
   )

@@ -2,34 +2,27 @@ import { createNoise2D } from 'simplex-noise'
 import { CatmullRomCurve3, Vector3 } from 'three'
 import { landscapeHeight } from './landscape'
 
+export const ROAD_HALF_WIDTH = 1.2 // m, demi-largeur de la route (rendu et aplanissement du terrain)
+
 const SEGMENT_LENGTH = 10 // m, distance entre deux points de contrôle
 const MAX_TURN_PER_SEGMENT = 0.35 // rad, virage max d'un segment à l'autre
 const CANDIDATE_TURNS = [-0.35, -0.23, -0.12, 0, 0.12, 0.23, 0.35] // rad, caps testés à chaque segment
-const MAX_GRADE = 0.12 // pente max ~12 %, route praticable même sur relief raide
+const MAX_GRADE = 0.12 // pente max ~12 %
+const STEEP_PENALTY = 10 // pénalité d'un cap dépassant MAX_GRADE
 const LATERAL_PROBE = 4 // m, écart latéral pour mesurer le dévers
 const LATERAL_WEIGHT = 0.5 // poids du dévers dans le coût d'un cap
 const TURN_WEIGHT = 0.5 // poids de l'écart au virage souhaité dans le coût
 const WANDER_FREQUENCY = 0.01 // fréquence du bruit qui donne le virage souhaité
-const SMOOTHING_HALF_WIDTH = 4 // fenêtre de lissage de 9 points
 const AHEAD_BUFFER = 300 // m, distance générée devant la position courante
 const BEHIND_BUFFER = 50 // m, distance gardée derrière avant recyclage
 
 interface PathPoint {
   position: Vector3
   distance: number // distance cumulée depuis l'origine du chemin
-  rawHeight: number // élévation échantillonnée sur le paysage, avant lissage
-  smoothed: boolean
 }
 
-interface Step {
-  heading: number
-  position: Vector3
-  rawHeight: number
-}
-
-// Le chemin est posé sur le paysage (landscape.ts), seule source de vérité du
-// relief : à chaque segment on choisit le cap qui minimise la pente, puis on
-// lisse l'élévation. Les points sont générés en avance et recyclés derrière.
+// Le terrain (landscape.ts) est la seule source de vérité : la route suit son
+// altitude exacte et choisit ses caps pour rester praticable.
 export class ProceduralPath {
   private readonly wander2D = createNoise2D()
   private points: PathPoint[]
@@ -38,15 +31,8 @@ export class ProceduralPath {
   revision = 0
 
   constructor() {
-    const originHeight = landscapeHeight(0, 0)
-    this.points = [
-      {
-        position: new Vector3(0, originHeight, 0),
-        distance: 0,
-        rawHeight: originHeight,
-        smoothed: false,
-      },
-    ]
+    const origin = new Vector3(0, landscapeHeight(0, 0), 0)
+    this.points = [{ position: origin, distance: 0 }]
     this.curve = new CatmullRomCurve3(this.points.map((p) => p.position))
     this.extend(AHEAD_BUFFER)
     this.rebuildCurve()
@@ -71,23 +57,29 @@ export class ProceduralPath {
   }
 
   /**
-   * Élévation du point du chemin le plus proche de (x, z) en plan, et la
-   * distance (planaire) à ce point. Utilisé par le terrain pour savoir à
-   * quel point coller à la route (corridor) et où s'en détacher.
+   * Altitude de la route à la projection de (x, z) sur le tracé, et distance
+   * planaire à ce tracé. Sert à aplanir le terrain sous la route.
    */
-  nearestElevation(x: number, z: number): { elevation: number; distance: number } {
+  roadAt(x: number, z: number): { height: number; distance: number } {
     let bestDistSq = Infinity
-    let elevation = 0
-    for (const point of this.points) {
-      const dx = point.position.x - x
-      const dz = point.position.z - z
+    let height = 0
+    for (let i = 0; i < this.points.length - 1; i++) {
+      const a = this.points[i]!.position
+      const b = this.points[i + 1]!.position
+      const abx = b.x - a.x
+      const abz = b.z - a.z
+      const lengthSq = abx * abx + abz * abz
+      const t =
+        lengthSq > 0 ? Math.min(Math.max(((x - a.x) * abx + (z - a.z) * abz) / lengthSq, 0), 1) : 0
+      const dx = a.x + abx * t - x
+      const dz = a.z + abz * t - z
       const distSq = dx * dx + dz * dz
       if (distSq < bestDistSq) {
         bestDistSq = distSq
-        elevation = point.position.y
+        height = a.y + (b.y - a.y) * t
       }
     }
-    return { elevation, distance: Math.sqrt(bestDistSq) }
+    return { height, distance: Math.sqrt(bestDistSq) }
   }
 
   getPointAt(distance: number): { position: Vector3; tangent: Vector3 } {
@@ -108,33 +100,27 @@ export class ProceduralPath {
     while (last.distance < targetDistance) {
       const preferredTurn =
         this.wander2D(last.distance * WANDER_FREQUENCY, 0) * MAX_TURN_PER_SEGMENT
-      const step = this.chooseStep(last, preferredTurn)
+      const step = this.chooseStep(last.position, preferredTurn)
       this.heading = step.heading
-      last = {
-        position: step.position,
-        distance: last.distance + SEGMENT_LENGTH,
-        rawHeight: step.rawHeight,
-        smoothed: false,
-      }
+      last = { position: step.position, distance: last.distance + SEGMENT_LENGTH }
       this.points.push(last)
-      this.smoothAt(this.points.length - 1 - SMOOTHING_HALF_WIDTH)
       didExtend = true
     }
     return didExtend
   }
 
-  private chooseStep(last: PathPoint, preferredTurn: number): Step {
-    let best: (Step & { cost: number }) | null = null
+  private chooseStep(from: Vector3, preferredTurn: number) {
+    let best: { heading: number; position: Vector3; cost: number } | null = null
 
     for (const turn of CANDIDATE_TURNS) {
       const heading = this.heading + turn
       const forwardX = Math.sin(heading)
       const forwardZ = -Math.cos(heading)
-      const x = last.position.x + forwardX * SEGMENT_LENGTH
-      const z = last.position.z + forwardZ * SEGMENT_LENGTH
-      const height = landscapeHeight(x, z)
+      const x = from.x + forwardX * SEGMENT_LENGTH
+      const z = from.z + forwardZ * SEGMENT_LENGTH
+      const y = landscapeHeight(x, z)
 
-      const slopeAlong = (height - last.rawHeight) / SEGMENT_LENGTH
+      const slopeAlong = (y - from.y) / SEGMENT_LENGTH
       const slopeAcross =
         (landscapeHeight(x - forwardZ * LATERAL_PROBE, z + forwardX * LATERAL_PROBE) -
           landscapeHeight(x + forwardZ * LATERAL_PROBE, z - forwardX * LATERAL_PROBE)) /
@@ -143,35 +129,15 @@ export class ProceduralPath {
       const cost =
         Math.abs(slopeAlong) +
         LATERAL_WEIGHT * Math.abs(slopeAcross) +
-        TURN_WEIGHT * Math.abs(turn - preferredTurn)
+        TURN_WEIGHT * Math.abs(turn - preferredTurn) +
+        (Math.abs(slopeAlong) > MAX_GRADE ? STEEP_PENALTY : 0)
 
       if (!best || cost < best.cost) {
-        best = { heading, position: new Vector3(x, height, z), rawHeight: height, cost }
+        best = { heading, position: new Vector3(x, y, z), cost }
       }
     }
 
-    const maxDelta = MAX_GRADE * SEGMENT_LENGTH
-    const rawHeight = Math.min(
-      Math.max(best!.rawHeight, last.rawHeight - maxDelta),
-      last.rawHeight + maxDelta,
-    )
-    return {
-      heading: best!.heading,
-      position: new Vector3(best!.position.x, rawHeight, best!.position.z),
-      rawHeight,
-    }
-  }
-
-  private smoothAt(index: number) {
-    if (index < 0) return
-    const point = this.points[index]!
-    if (point.smoothed) return
-    const from = Math.max(0, index - SMOOTHING_HALF_WIDTH)
-    const to = Math.min(this.points.length - 1, index + SMOOTHING_HALF_WIDTH)
-    let sum = 0
-    for (let i = from; i <= to; i++) sum += this.points[i]!.rawHeight
-    point.position.y = sum / (to - from + 1)
-    point.smoothed = true
+    return { heading: best!.heading, position: best!.position }
   }
 
   private prune(currentDistance: number): boolean {

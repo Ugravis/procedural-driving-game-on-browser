@@ -1,27 +1,25 @@
 import { BufferGeometry, Float32BufferAttribute } from 'three'
 import { landscapeHeight } from './landscape'
-import type { ProceduralPath } from './pathGenerator'
+import { ROAD_HALF_WIDTH, type ProceduralPath } from './pathGenerator'
 
 export const CHUNK_SIZE = 50 // m, taille d'un chunk de terrain
-export const CHUNK_RESOLUTION = 20 // subdivisions par côté
+export const CHUNK_RESOLUTION = 50 // subdivisions par côté (1 m, pour que l'aplanissement de la route soit net)
 export const RENDER_RADIUS_CHUNKS = 3 // rayon (en chunks) chargé autour du joueur
 
-const CORRIDOR_WIDTH = 15 // m, le terrain colle exactement à l'élévation de la route sur cette largeur
-const BLEND_WIDTH = 35 // m, transition progressive vers le relief du paysage au-delà du corridor
+const SHOULDER_WIDTH = 1 // m, transition douce entre l'aplanissement et le relief naturel
 
 /**
- * Hauteur du terrain en (x, z) : colle à l'élévation de la route dans le
- * corridor, se fond progressivement dans le relief ambiant au-delà (comme
- * slowroads.io — le terrain épouse la route, pas l'inverse).
+ * Terrain sous la route : aplani à son altitude sur sa demi-largeur, puis une
+ * transition d'un mètre vers le relief naturel. Au-delà, c'est le paysage brut.
  */
 export function heightAt(x: number, z: number, path: ProceduralPath): number {
-  const { elevation, distance } = path.nearestElevation(x, z)
-  if (distance <= CORRIDOR_WIDTH) return elevation
-  const landscape = landscapeHeight(x, z)
-  if (distance >= CORRIDOR_WIDTH + BLEND_WIDTH) return landscape
-  const t = (distance - CORRIDOR_WIDTH) / BLEND_WIDTH
-  const smooth = t * t * (3 - 2 * t) // smoothstep : transition douce, pas de pli visible
-  return elevation + (landscape - elevation) * smooth
+  const road = path.roadAt(x, z)
+  if (road.distance <= ROAD_HALF_WIDTH) return road.height
+  const natural = landscapeHeight(x, z)
+  if (road.distance >= ROAD_HALF_WIDTH + SHOULDER_WIDTH) return natural
+  const t = (road.distance - ROAD_HALF_WIDTH) / SHOULDER_WIDTH
+  const smooth = t * t * (3 - 2 * t)
+  return road.height + (natural - road.height) * smooth
 }
 
 /** Construit la géométrie d'un chunk de terrain (coordonnées locales centrées
