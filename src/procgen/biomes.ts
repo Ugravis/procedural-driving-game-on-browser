@@ -42,6 +42,8 @@ const SEA_WIDTH = 0.15 // largeur de la transition côte / mer
 const SEA_BED = -80 // m, altitude moyenne du fond de mer
 
 let seaNoise: NoiseFunction2D = createNoise2D(createRandom(BIOME_SALT + 20))
+let groveNoise: NoiseFunction2D = createNoise2D(createRandom(BIOME_SALT + 30))
+const GROVE_FREQUENCY = 1 / 180 // 1/m, bosquets de l'ordre de 100 m
 
 let scaleNoises: NoiseFunction2D[] = SCALES.map((_, i) =>
   createNoise2D(createRandom(BIOME_SALT + i)),
@@ -52,6 +54,12 @@ export function setBiomeSeed(seed: number) {
   scaleNoises = SCALES.map((_, i) => createNoise2D(createRandom(seed + BIOME_SALT + i)))
   warpNoise = createNoise2D(createRandom(seed + BIOME_SALT + 10))
   seaNoise = createNoise2D(createRandom(seed + BIOME_SALT + 20))
+  groveNoise = createNoise2D(createRandom(seed + BIOME_SALT + 30))
+}
+
+// Entre 0 et 1 : bosquets denses et clairières, pour que les arbres ne soient pas répartis uniformément.
+export function groveFactor(x: number, z: number): number {
+  return Math.min(Math.max(0.5 + 0.8 * groveNoise(x * GROVE_FREQUENCY, z * GROVE_FREQUENCY), 0), 1)
 }
 
 // 0 sur terre, 1 en pleine mer, transition lisse entre les deux (continue).
