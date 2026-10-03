@@ -31,11 +31,15 @@ function Slider({ label, value, min, max, step, onChange }: SliderProps) {
 export function SettingsPanel() {
   const settings = useGameStore((s) => s.settings)
   const draft = useGameStore((s) => s.landscapeDraft)
+  const seedDraft = useGameStore((s) => s.seedDraft)
   const toggleContours = useGameStore((s) => s.toggleContours)
+  const toggleDrivingReverse = useGameStore((s) => s.toggleDrivingReverse)
   const setCameraDistance = useGameStore((s) => s.setCameraDistance)
   const setCameraHeight = useGameStore((s) => s.setCameraHeight)
+  const setSeedDraft = useGameStore((s) => s.setSeedDraft)
   const setDraft = useGameStore((s) => s.setLandscapeDraft)
   const regenerate = useGameStore((s) => s.regenerate)
+  const randomizeSeed = useGameStore((s) => s.randomizeSeed)
 
   return (
     <section className="hud-panel" aria-label="Réglages">
@@ -45,6 +49,26 @@ export function SettingsPanel() {
         <input type="checkbox" checked={settings.showContours} onChange={toggleContours} />
         Courbes de niveau
       </label>
+
+      <label className="hud-check">
+        <input type="checkbox" checked={settings.drivingReverse} onChange={toggleDrivingReverse} />
+        Rouler en arrière
+      </label>
+
+      <h3>Graine</h3>
+      <div className="hud-seed">
+        <input
+          type="number"
+          min={0}
+          step={1}
+          value={seedDraft}
+          aria-label="Graine"
+          onChange={(e) => setSeedDraft(Number(e.target.value) >>> 0)}
+        />
+        <button type="button" className="hud-button" onClick={randomizeSeed}>
+          Aléatoire
+        </button>
+      </div>
 
       <Slider
         label="Recul caméra (m)"
@@ -113,7 +137,7 @@ export function SettingsPanel() {
       />
 
       <button type="button" className="hud-button" onClick={regenerate}>
-        Régénérer le relief
+        Régénérer le monde
       </button>
     </section>
   )

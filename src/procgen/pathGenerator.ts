@@ -1,6 +1,7 @@
-import { createNoise2D } from 'simplex-noise'
+import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import { CatmullRomCurve3, Vector3 } from 'three'
 import { landscapeHeight } from './landscape'
+import { createRandom } from './random'
 
 export const ROAD_HALF_WIDTH = 1.2 // m, demi-largeur de la route (rendu et aplanissement du terrain)
 
@@ -17,16 +18,21 @@ const GLOBAL_DIRECTION_FREQUENCY = 0.0002 // 1/m, la direction générale change
 const GLOBAL_DIRECTION_RANGE = 1 // rad, écart max de la direction générale à l'axe initial
 const GLOBAL_DIRECTION_WEIGHT = 0.3 // poids de l'écart à la direction générale dans le coût
 const CLEARANCE = 8 // m, distance minimale à un point ancien (évite les croisements)
-const MIN_SEPARATION_SEGMENTS = 40 // nombre de segments à partir duquel un point est "ancien"
+const MIN_SEPARATION = 400 // m, longueur d'arc à partir de laquelle un point est "ancien"
 const COLLISION_PENALTY = 1000 // pénalité d'un cap qui recroise le tracé
 const LOOKAHEAD_WEIGHT = 0.7 // poids du meilleur coût au segment suivant dans le choix d'un cap
 const GRID_CELL = 20 // m, taille des cellules de recherche spatiale
-const AHEAD_BUFFER = 300 // m, distance générée devant la position courante
-const BEHIND_BUFFER = 50 // m, distance gardée derrière avant recyclage
+const AHEAD_BUFFER = 300 // m, distance fournie devant la position courante
+const BEHIND_BUFFER = 50 // m, distance fournie derrière la position courante
+
+const WANDER_SALT = 1
+const DIRECTION_SALT = 2
+
+const TWO_PI = Math.PI * 2
 
 interface PathPoint {
   position: Vector3
-  distance: number // distance cumulée depuis l'origine du chemin
+  distance: number // distance signée depuis l'origine (négative vers l'arrière)
 }
 
 interface Candidate {
@@ -35,7 +41,11 @@ interface Candidate {
   cost: number
 }
 
-const TWO_PI = Math.PI * 2
+interface Sample {
+  x: number
+  z: number
+  distance: number
+}
 
 function angleDifference(a: number, b: number): number {
   let d = (a - b) % TWO_PI
@@ -44,51 +54,48 @@ function angleDifference(a: number, b: number): number {
   return d
 }
 
-// Le terrain (landscape.ts) est la seule source de vérité : la route suit son
-// altitude exacte, garde une direction générale qui varie lentement, et
-// évite de recroiser un de ses anciens points.
+// Le tracé est généré dans les deux sens à partir de l'origine, en pas
+// synchronisés : le segment n'ayant besoin que de ce qui a déjà été généré,
+// un même couple (graine, distance) donne toujours le même tracé, quel que soit
+// le chemin parcouru par le joueur. Seule une fenêtre autour du joueur est
+// exposée au terrain et au rendu.
 export class ProceduralPath {
-  private wander2D = createNoise2D()
-  private direction2D = createNoise2D()
-  private points: PathPoint[] = []
-  private history: Vector3[] = []
-  private grid = new Map<string, number[]>()
-  private heading = 0
+  private wander2D!: NoiseFunction2D
+  private direction2D!: NoiseFunction2D
+  private forward: Vector3[] = [] // forward[i] à la distance +i * SEGMENT_LENGTH
+  private backward: Vector3[] = [] // backward[i] à la distance -i * SEGMENT_LENGTH
+  private headingForward = 0
+  private headingBackward = Math.PI
+  private grid = new Map<string, Sample[]>()
+  private windowFirst = Number.NaN
+  private windowLast = Number.NaN
+  private window: PathPoint[] = []
   private curve = new CatmullRomCurve3()
   revision = 0
 
-  constructor() {
-    this.init()
+  constructor(seed: number) {
+    this.reset(seed)
   }
 
-  /** Repart de l'origine avec de nouveaux bruits (après régénération du relief). */
-  reset() {
-    this.wander2D = createNoise2D()
-    this.direction2D = createNoise2D()
-    this.init()
+  reset(seed: number) {
+    this.wander2D = createNoise2D(createRandom(seed + WANDER_SALT))
+    this.direction2D = createNoise2D(createRandom(seed + DIRECTION_SALT))
+    const origin = new Vector3(0, landscapeHeight(0, 0), 0)
+    this.forward = [origin]
+    this.backward = [origin]
+    this.headingForward = 0
+    this.headingBackward = Math.PI
+    this.grid = new Map()
+    this.record(origin, 0)
+    this.windowFirst = Number.NaN
+    this.windowLast = Number.NaN
+    this.refreshWindow(0)
     this.revision++
   }
 
-  private init() {
-    this.history = []
-    this.grid = new Map()
-    this.heading = 0
-    const origin = new Vector3(0, landscapeHeight(0, 0), 0)
-    this.points = [{ position: origin, distance: 0 }]
-    this.record(origin)
-    this.curve = new CatmullRomCurve3(this.points.map((p) => p.position))
-    this.extend(AHEAD_BUFFER)
-    this.rebuildCurve()
-  }
-
-  /** À appeler une fois par frame avec la distance parcourue courante. */
+  /** À appeler une fois par frame avec la distance signée courante. */
   update(currentDistance: number) {
-    const extended = this.extend(currentDistance + AHEAD_BUFFER)
-    const pruned = this.prune(currentDistance)
-    if (extended || pruned) {
-      this.rebuildCurve()
-      this.revision++
-    }
+    if (this.refreshWindow(currentDistance)) this.revision++
   }
 
   getCurve(): CatmullRomCurve3 {
@@ -96,7 +103,7 @@ export class ProceduralPath {
   }
 
   get pointCount() {
-    return this.points.length
+    return this.window.length
   }
 
   /**
@@ -106,9 +113,9 @@ export class ProceduralPath {
   roadAt(x: number, z: number): { height: number; distance: number } {
     let bestDistSq = Infinity
     let height = 0
-    for (let i = 0; i < this.points.length - 1; i++) {
-      const a = this.points[i]!.position
-      const b = this.points[i + 1]!.position
+    for (let i = 0; i < this.window.length - 1; i++) {
+      const a = this.window[i]!.position
+      const b = this.window[i + 1]!.position
       const abx = b.x - a.x
       const abz = b.z - a.z
       const lengthSq = abx * abx + abz * abz
@@ -126,8 +133,8 @@ export class ProceduralPath {
   }
 
   getPointAt(distance: number): { position: Vector3; tangent: Vector3 } {
-    const first = this.points[0]!
-    const last = this.points[this.points.length - 1]!
+    const first = this.window[0]!
+    const last = this.window[this.window.length - 1]!
     const span = last.distance - first.distance
     const t = span > 0 ? (distance - first.distance) / span : 0
     const clampedT = Math.min(Math.max(t, 0), 1)
@@ -137,39 +144,81 @@ export class ProceduralPath {
     }
   }
 
-  private extend(targetDistance: number): boolean {
-    let last = this.points[this.points.length - 1]!
-    let didExtend = false
-    while (last.distance < targetDistance) {
-      const preferredTurn =
-        this.wander2D(last.distance * WANDER_FREQUENCY, 0) * MAX_TURN_PER_SEGMENT
-      const targetHeading =
-        this.direction2D(last.distance * GLOBAL_DIRECTION_FREQUENCY, 0) * GLOBAL_DIRECTION_RANGE
-      const step = this.chooseStep(last.position, preferredTurn, targetHeading)
-      this.heading = step.heading
-      last = { position: step.position, distance: last.distance + SEGMENT_LENGTH }
-      this.points.push(last)
-      this.record(last.position)
-      didExtend = true
+  private refreshWindow(distance: number): boolean {
+    const first = Math.floor((distance - BEHIND_BUFFER) / SEGMENT_LENGTH)
+    const last = Math.ceil((distance + AHEAD_BUFFER) / SEGMENT_LENGTH)
+    if (first === this.windowFirst && last === this.windowLast) return false
+    this.ensure(Math.max(last, -first))
+    this.windowFirst = first
+    this.windowLast = last
+    this.window = []
+    for (let k = first; k <= last; k++) {
+      this.window.push({ position: this.pointAt(k), distance: k * SEGMENT_LENGTH })
     }
-    return didExtend
+    this.curve = new CatmullRomCurve3(this.window.map((p) => p.position))
+    return true
   }
 
-  private chooseStep(from: Vector3, preferredTurn: number, targetHeading: number) {
-    const lastIndex = this.history.length - 1
+  private pointAt(index: number): Vector3 {
+    return index >= 0 ? this.forward[index]! : this.backward[-index]!
+  }
+
+  private ensure(count: number) {
+    while (this.forward.length <= count) {
+      this.grow(1)
+      this.grow(-1)
+    }
+  }
+
+  private grow(direction: 1 | -1) {
+    const arm = direction > 0 ? this.forward : this.backward
+    const fromIndex = arm.length - 1
+    const from = arm[fromIndex]!
+    const fromDistance = direction * fromIndex * SEGMENT_LENGTH
+    const fromHeading = direction > 0 ? this.headingForward : this.headingBackward
+    const preferredTurn = this.wander2D(fromDistance * WANDER_FREQUENCY, 0) * MAX_TURN_PER_SEGMENT
+    const baseHeading = direction > 0 ? 0 : Math.PI
+    const targetHeading =
+      baseHeading +
+      this.direction2D(fromDistance * GLOBAL_DIRECTION_FREQUENCY, 0) * GLOBAL_DIRECTION_RANGE
+
+    const step = this.chooseStep(
+      from,
+      fromHeading,
+      fromDistance,
+      direction,
+      preferredTurn,
+      targetHeading,
+    )
+    arm.push(step.position)
+    this.record(step.position, fromDistance + direction * SEGMENT_LENGTH)
+    if (direction > 0) this.headingForward = step.heading
+    else this.headingBackward = step.heading
+  }
+
+  private chooseStep(
+    from: Vector3,
+    fromHeading: number,
+    fromDistance: number,
+    direction: 1 | -1,
+    preferredTurn: number,
+    targetHeading: number,
+  ): Candidate {
+    const distance = fromDistance + direction * SEGMENT_LENGTH
+    const nextDistance = distance + direction * SEGMENT_LENGTH
     let best: Candidate | null = null
 
     for (const turn of CANDIDATE_TURNS) {
-      const first = this.evaluate(from, this.heading, turn, preferredTurn, targetHeading, lastIndex)
+      const first = this.evaluate(from, fromHeading, turn, distance, preferredTurn, targetHeading)
       let future = Infinity
       for (const nextTurn of CANDIDATE_TURNS) {
         const second = this.evaluate(
           first.position,
           first.heading,
           nextTurn,
+          nextDistance,
           0,
           targetHeading,
-          lastIndex,
         )
         future = Math.min(future, second.cost)
       }
@@ -177,16 +226,16 @@ export class ProceduralPath {
       if (!best || total < best.cost) best = { ...first, cost: total }
     }
 
-    return { heading: best!.heading, position: best!.position }
+    return best!
   }
 
   private evaluate(
     from: Vector3,
     fromHeading: number,
     turn: number,
+    distance: number,
     preferredTurn: number,
     targetHeading: number,
-    lastIndex: number,
   ): Candidate {
     const heading = fromHeading + turn
     const forwardX = Math.sin(heading)
@@ -207,33 +256,30 @@ export class ProceduralPath {
       TURN_WEIGHT * Math.abs(turn - preferredTurn) +
       GLOBAL_DIRECTION_WEIGHT * Math.abs(angleDifference(heading, targetHeading)) +
       (Math.abs(slopeAlong) > MAX_GRADE ? STEEP_PENALTY : 0) +
-      (this.collides(x, z, lastIndex) ? COLLISION_PENALTY : 0)
+      (this.collides(x, z, distance) ? COLLISION_PENALTY : 0)
 
     return { heading, position: new Vector3(x, y, z), cost }
   }
 
-  private record(position: Vector3) {
-    const index = this.history.length
-    this.history.push(position)
+  private record(position: Vector3, distance: number) {
     const key = this.cellKey(position.x, position.z)
+    const sample: Sample = { x: position.x, z: position.z, distance }
     const cell = this.grid.get(key)
-    if (cell) cell.push(index)
-    else this.grid.set(key, [index])
+    if (cell) cell.push(sample)
+    else this.grid.set(key, [sample])
   }
 
-  private collides(x: number, z: number, lastIndex: number): boolean {
+  private collides(x: number, z: number, distance: number): boolean {
     const cx = Math.floor(x / GRID_CELL)
     const cz = Math.floor(z / GRID_CELL)
-    const oldestAllowed = lastIndex - MIN_SEPARATION_SEGMENTS
     for (let i = cx - 1; i <= cx + 1; i++) {
       for (let j = cz - 1; j <= cz + 1; j++) {
         const cell = this.grid.get(`${i}:${j}`)
         if (!cell) continue
-        for (const index of cell) {
-          if (index > oldestAllowed) continue
-          const p = this.history[index]!
-          const dx = p.x - x
-          const dz = p.z - z
+        for (const sample of cell) {
+          if (Math.abs(sample.distance - distance) <= MIN_SEPARATION) continue
+          const dx = sample.x - x
+          const dz = sample.z - z
           if (dx * dx + dz * dz < CLEARANCE * CLEARANCE) return true
         }
       }
@@ -244,24 +290,6 @@ export class ProceduralPath {
   private cellKey(x: number, z: number): string {
     return `${Math.floor(x / GRID_CELL)}:${Math.floor(z / GRID_CELL)}`
   }
-
-  private prune(currentDistance: number): boolean {
-    const cutoff = currentDistance - BEHIND_BUFFER
-    let removeCount = 0
-    // on garde toujours au moins 2 points pour que la courbe reste valide
-    while (
-      this.points.length - removeCount > 2 &&
-      this.points[removeCount + 1]!.distance < cutoff
-    ) {
-      removeCount++
-    }
-    if (removeCount > 0) this.points.splice(0, removeCount)
-    return removeCount > 0
-  }
-
-  private rebuildCurve() {
-    this.curve = new CatmullRomCurve3(this.points.map((p) => p.position))
-  }
 }
 
-export const proceduralPath = new ProceduralPath()
+export const proceduralPath = new ProceduralPath(0)
