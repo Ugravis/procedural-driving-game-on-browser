@@ -4,10 +4,13 @@ import { isUnderWater } from './water'
 import { heightAt } from './terrain'
 
 const CELL_SIZE = 6 // m, taille de cellule de la grille de dispersion
-const DENSITY = 0.45 // probabilité qu'une cellule contienne un arbre
-const ROAD_EDGE_CLEARANCE = 3 // m, marge entre le bord de la route et l'arbre sur terrain plat
+const ROAD_EDGE_CLEARANCE = 2 // m, marge entre le bord de la route et l'arbre sur terrain plat
 const STEEP_CLEARANCE = 20 // m, marge depuis l'axe quand le terrain est pentu
 const FLAT_SLOPE = 0.08 // pente sous laquelle la marge réduite s'applique
+const GROVE_START = 0.4 // valeur de bruit à partir de laquelle commence un bosquet
+const GROVE_FULL = 0.6 // valeur de bruit à partir de laquelle le bosquet est dense
+const GROVE_DENSITY = 0.9 // probabilité d'un arbre par cellule au cœur d'un bosquet
+const CLEARING_DENSITY = 0.08 // probabilité d'un arbre par cellule dans une clairière
 const MAX_SLOPE = 0.4 // pente au-delà de laquelle aucun arbre ne pousse
 const SLOPE_PROBE = 1.5 // m, écart pour mesurer la pente locale
 
@@ -21,6 +24,11 @@ export interface VegetationInstance {
 function hash(x: number, z: number): number {
   const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453123
   return s - Math.floor(s)
+}
+
+function smoothstep(edge0: number, edge1: number, value: number): number {
+  const t = Math.min(Math.max((value - edge0) / (edge1 - edge0), 0), 1)
+  return t * t * (3 - 2 * t)
 }
 
 function slopeAt(x: number, z: number, path: ProceduralPath): number {
@@ -55,7 +63,11 @@ export function scatterVegetation(
       if (slope > MAX_SLOPE) continue
       const weights = biomeWeights(x, z)
       const slopeFactor = 1 - slope / MAX_SLOPE
-      const density = DENSITY * vegetationFactor(weights) * groveFactor(x, z) * slopeFactor
+      const grove = smoothstep(GROVE_START, GROVE_FULL, groveFactor(x, z))
+      const density =
+        (CLEARING_DENSITY + (GROVE_DENSITY - CLEARING_DENSITY) * grove) *
+        vegetationFactor(weights) *
+        slopeFactor
       if (hash(cellX, cellZ) > density) continue
 
       const { distance } = path.roadAt(x, z)

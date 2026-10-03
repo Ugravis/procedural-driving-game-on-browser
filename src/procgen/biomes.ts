@@ -57,9 +57,9 @@ export function setBiomeSeed(seed: number) {
   groveNoise = createNoise2D(createRandom(seed + BIOME_SALT + 30))
 }
 
-// Entre 0 et 1 : bosquets denses et clairières, pour que les arbres ne soient pas répartis uniformément.
+// Entre 0 et 1 : bosquets et clairières, pour que les arbres ne soient pas répartis uniformément.
 export function groveFactor(x: number, z: number): number {
-  return Math.min(Math.max(0.5 + 0.8 * groveNoise(x * GROVE_FREQUENCY, z * GROVE_FREQUENCY), 0), 1)
+  return Math.min(Math.max(0.5 + 0.5 * groveNoise(x * GROVE_FREQUENCY, z * GROVE_FREQUENCY), 0), 1)
 }
 
 // 0 sur terre, 1 en pleine mer, transition lisse entre les deux (continue).
