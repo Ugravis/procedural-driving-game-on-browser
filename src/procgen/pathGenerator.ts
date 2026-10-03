@@ -7,6 +7,7 @@ export const ROAD_HALF_WIDTH = 1.2 // m, demi-largeur de la route (rendu et apla
 
 const SEGMENT_LENGTH = 10 // m, distance entre deux points de contrôle
 const SUBSAMPLES = 4 // échantillons de courbe par segment de contrôle
+const SAMPLE_SPACING = SEGMENT_LENGTH / SUBSAMPLES // m
 const GENERATION_MARGIN = 800 // m, tracé généré au-delà de la position courante, dans les deux sens
 const MAX_TURN_PER_SEGMENT = 0.35 // rad, virage max d'un segment à l'autre
 const CANDIDATE_TURNS = [-0.7, -0.5, -0.35, -0.2, -0.1, 0, 0.1, 0.2, 0.35, 0.5, 0.7] // rad, caps testés à chaque segment
@@ -152,10 +153,11 @@ export class ProceduralPath {
    * route, et vrai si la projection tombe sur un tablier. Vaut Infinity si la
    * route n'est pas dans les environs.
    */
-  roadAt(x: number, z: number): { height: number; distance: number; bridge: boolean } {
+  roadAt(x: number, z: number): { height: number; distance: number; bridge: boolean; arc: number } {
     let bestDistSq = Infinity
     let height = 0
     let bridge = false
+    let arc = 0
     const cx = Math.floor(x / GRID_CELL)
     const cz = Math.floor(z / GRID_CELL)
     for (let i = cx - 1; i <= cx + 1; i++) {
@@ -178,11 +180,12 @@ export class ProceduralPath {
             bestDistSq = distSq
             height = a.y + (b.y - a.y) * t
             bridge = a.bridge && b.bridge
+            arc = (index + t) * SAMPLE_SPACING
           }
         }
       }
     }
-    return { height, distance: Math.sqrt(bestDistSq), bridge }
+    return { height, distance: Math.sqrt(bestDistSq), bridge, arc }
   }
 
   /** Segments de route (hors tabliers) dont au moins une extrémité touche la zone. */
@@ -214,13 +217,6 @@ export class ProceduralPath {
       if (b && a.bridge && b.bridge) segments.push({ a, b })
     }
     return segments
-  }
-
-  /** Position et tangente du tracé à la distance signée donnée (même spline que les échantillons). */
-  getPointAt(distance: number): { position: Vector3; tangent: Vector3 } {
-    const k = Math.floor(distance / SEGMENT_LENGTH)
-    const u = distance / SEGMENT_LENGTH - k
-    return this.spline(k, u)
   }
 
   // Spline de Catmull-Rom uniforme entre les points de contrôle k et k+1.

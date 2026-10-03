@@ -34,7 +34,6 @@ export function SettingsPanel() {
   const draft = useGameStore((s) => s.landscapeDraft)
   const seedDraft = useGameStore((s) => s.seedDraft)
   const toggleContours = useGameStore((s) => s.toggleContours)
-  const toggleDrivingReverse = useGameStore((s) => s.toggleDrivingReverse)
   const toggleLookMode = useGameStore((s) => s.toggleLookMode)
   const setSeason = useGameStore((s) => s.setSeason)
   const setCameraDistance = useGameStore((s) => s.setCameraDistance)
@@ -52,11 +51,6 @@ export function SettingsPanel() {
       <label className="hud-check">
         <input type="checkbox" checked={settings.showContours} onChange={toggleContours} />
         Courbes de niveau
-      </label>
-
-      <label className="hud-check">
-        <input type="checkbox" checked={settings.drivingReverse} onChange={toggleDrivingReverse} />
-        Rouler en arrière
       </label>
 
       <label className="hud-check">
