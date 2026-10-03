@@ -113,3 +113,13 @@
   padding: 6px;
   cursor: pointer;
 }
+
+.hud-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.hud-presets .hud-button {
+  margin-top: 0;
+}

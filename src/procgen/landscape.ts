@@ -7,6 +7,12 @@ export interface LandscapeParams {
   persistence: number
 }
 
+export const LANDSCAPE_PRESETS: Record<'Plaine' | 'Colline' | 'Montagne', LandscapeParams> = {
+  Plaine: { heightScale: 12, frequency: 0.0015, octaves: 2, persistence: 0.4 },
+  Colline: { heightScale: 40, frequency: 0.001, octaves: 2, persistence: 0.4 },
+  Montagne: { heightScale: 120, frequency: 0.0008, octaves: 4, persistence: 0.45 },
+}
+
 export const DEFAULT_LANDSCAPE: LandscapeParams = {
   heightScale: 40,
   frequency: 0.001,

@@ -1,4 +1,5 @@
 import { useGameStore } from '../state/gameStore'
+import { LANDSCAPE_PRESETS } from '../procgen/landscape'
 
 interface SliderProps {
   label: string
@@ -63,6 +64,21 @@ export function SettingsPanel() {
       />
 
       <h3>Relief</h3>
+      <div className="hud-presets">
+        {(Object.keys(LANDSCAPE_PRESETS) as (keyof typeof LANDSCAPE_PRESETS)[]).map((name) => (
+          <button
+            key={name}
+            type="button"
+            className="hud-button"
+            onClick={() => {
+              setDraft(LANDSCAPE_PRESETS[name])
+              regenerate()
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
       <Slider
         label="Amplitude (m)"
         value={draft.heightScale}

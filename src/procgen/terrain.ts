@@ -4,7 +4,7 @@ import { ROAD_HALF_WIDTH, type ProceduralPath } from './pathGenerator'
 
 export const CHUNK_SIZE = 50 // m, taille d'un chunk de terrain
 export const CHUNK_RESOLUTION = 50 // subdivisions par côté (1 m, pour que l'aplanissement de la route soit net)
-export const RENDER_RADIUS_CHUNKS = 3 // rayon (en chunks) chargé autour du joueur
+export const RENDER_RADIUS_CHUNKS = 4 // rayon (en chunks) chargé autour du joueur
 
 const SHOULDER_WIDTH = 1 // m, transition douce entre l'aplanissement et le relief naturel
 
