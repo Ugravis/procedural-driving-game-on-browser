@@ -29,6 +29,7 @@ export interface DebugState {
 export interface SettingsState {
   showContours: boolean
   lookMode: boolean // ambiance ombrée : soleil, ombres, rendu facetté
+  night: boolean // mode nuit : soleil couché, ciel et brouillard sombres
   season: Season
   cameraDistance: number // m, recul de la caméra derrière le véhicule
   cameraHeight: number // m, hauteur de la caméra
@@ -58,6 +59,7 @@ interface GameStore {
   setPathPointCount: (count: number) => void
   toggleContours: () => void
   toggleLookMode: () => void
+  setNight: (night: boolean) => void
   setSeason: (season: Season) => void
   setCameraDistance: (value: number) => void
   setCameraHeight: (value: number) => void
@@ -97,6 +99,7 @@ export const useGameStore = create<GameStore>()(
     settings: {
       showContours: false,
       lookMode: false,
+      night: false,
       season: 'été',
       cameraDistance: 11,
       cameraHeight: 4,
@@ -133,6 +136,7 @@ export const useGameStore = create<GameStore>()(
     toggleContours: () =>
       set((s) => ({ settings: { ...s.settings, showContours: !s.settings.showContours } })),
     setSeason: (season) => set((s) => ({ settings: { ...s.settings, season } })),
+    setNight: (night) => set((s) => ({ settings: { ...s.settings, night } })),
     toggleLookMode: () =>
       set((s) => ({ settings: { ...s.settings, lookMode: !s.settings.lookMode } })),
     setCameraDistance: (cameraDistance) =>

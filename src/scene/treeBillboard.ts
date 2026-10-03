@@ -1,4 +1,10 @@
-import { CanvasTexture, DoubleSide, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace } from 'three'
+import {
+  CanvasTexture,
+  DoubleSide,
+  MeshLambertMaterial,
+  PlaneGeometry,
+  SRGBColorSpace,
+} from 'three'
 import { SEASON_PALETTES, type Season } from './seasons'
 
 const TREE_WIDTH = 2 // m
@@ -18,7 +24,7 @@ gl_Position = projectionMatrix * mvPosition;
 
 let geometry: PlaneGeometry | null = null
 let texture: CanvasTexture | null = null
-const materials = new Map<Season, MeshBasicMaterial>()
+const materials = new Map<Season, MeshLambertMaterial>()
 
 export function treeGeometry(): PlaneGeometry {
   if (!geometry) {
@@ -53,10 +59,10 @@ function treeTexture(): CanvasTexture {
   return texture
 }
 
-export function treeMaterial(season: Season): MeshBasicMaterial {
+export function treeMaterial(season: Season): MeshLambertMaterial {
   let material = materials.get(season)
   if (!material) {
-    material = new MeshBasicMaterial({
+    material = new MeshLambertMaterial({
       map: treeTexture(),
       color: SEASON_PALETTES[season].foliage,
       alphaTest: 0.5,
