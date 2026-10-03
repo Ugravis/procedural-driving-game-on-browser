@@ -80,23 +80,27 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView) {
 
   // Même hauteur que le terrain 3D (route aplanie comprise), pour que l'eau coïncide.
   const bands: number[][] = []
+  const wet: boolean[][] = []
   for (let j = 0; j < cells; j++) {
     const row: number[] = []
+    const wetRow: boolean[] = []
     for (let i = 0; i < cells; i++) {
       const height = heightAt(
         originX + (i + 0.5) * cell,
         originZ + (j + 0.5) * cell,
         proceduralPath,
       )
-      row.push(height < waterLevel ? -1 : Math.floor(height / CONTOUR_INTERVAL))
+      wetRow.push(height < waterLevel)
+      row.push(Math.floor(height / CONTOUR_INTERVAL))
     }
     bands.push(row)
+    wet.push(wetRow)
   }
 
   context.clearRect(0, 0, size, size)
   for (let j = 0; j < cells; j++) {
     for (let i = 0; i < cells; i++) {
-      context.fillStyle = bands[j]![i]! < 0 ? WATER : LAND
+      context.fillStyle = wet[j]![i] ? WATER : LAND
       context.fillRect(i * cellPx, j * cellPx, cellPx + 1, cellPx + 1)
     }
   }
@@ -104,12 +108,12 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView) {
   context.fillStyle = CONTOUR
   for (let j = 0; j < cells; j++) {
     for (let i = 0; i < cells; i++) {
+      if (wet[j]![i]) continue
       const band = bands[j]![i]!
-      if (band < 0) continue
-      if (i + 1 < cells && bands[j]![i + 1]! >= 0 && bands[j]![i + 1] !== band) {
+      if (i + 1 < cells && !wet[j]![i + 1] && bands[j]![i + 1] !== band) {
         context.fillRect((i + 1) * cellPx, j * cellPx, 1, cellPx)
       }
-      if (j + 1 < cells && bands[j + 1]![i]! >= 0 && bands[j + 1]![i] !== band) {
+      if (j + 1 < cells && !wet[j + 1]![i] && bands[j + 1]![i] !== band) {
         context.fillRect(i * cellPx, (j + 1) * cellPx, cellPx, 1)
       }
     }
