@@ -13,12 +13,7 @@ export const LANDSCAPE_PRESETS: Record<'Plaine' | 'Colline' | 'Montagne', Landsc
   Montagne: { heightScale: 120, frequency: 0.0008, octaves: 4, persistence: 0.45 },
 }
 
-export const DEFAULT_LANDSCAPE: LandscapeParams = {
-  heightScale: 40,
-  frequency: 0.001,
-  octaves: 2,
-  persistence: 0.4,
-}
+export const DEFAULT_LANDSCAPE: LandscapeParams = { ...LANDSCAPE_PRESETS.Montagne }
 
 let params: LandscapeParams = { ...DEFAULT_LANDSCAPE }
 let noise2D = createNoise2D()
