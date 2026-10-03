@@ -1,74 +1,93 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Vector3, type Mesh } from 'three'
-import { proceduralPath } from '../procgen/pathGenerator'
+import { proceduralPath, ROAD_HALF_WIDTH } from '../procgen/pathGenerator'
+import { heightAt } from '../procgen/terrain'
 import { useGameStore } from '../state/gameStore'
-import { nextSpeed } from '../vehicle/physics'
 import { KeyboardControls } from '../vehicle/controls'
+import { nextSpeed } from '../vehicle/physics'
 
-const VEHICLE_LIFT = 0.5 // m, au-dessus de la route
+const VEHICLE_LIFT = 0.5 // m, au-dessus du sol
+const TURN_RATE = 1.2 // rad/s, braquage à pleine vitesse
+const FULL_STEER_SPEED = 5 // m/s, en dessous le braquage est réduit
+const ON_ROAD_DISTANCE = 30 // m, au-delà on considère qu'on a quitté la route
+const GRADE_SAMPLE = 2 // m, distance d'échantillonnage de la pente devant
 const RAD_TO_DEG = 180 / Math.PI
-const DEG_TO_RAD = Math.PI / 180
 const MS_TO_KMH = 3.6
 
-// Véhicule posé sur le tracé : sa vitesse suit la physique (accélération, frein,
-// pente, résistances) et il avance le long de la route. La caméra le suit.
+// Véhicule en conduite libre : position et cap, la hauteur vient du terrain.
+// La route est un chemin praticable, pas un rail. Le tracé est généré jusqu'à
+// la portion de route la plus proche, donc la route suit le joueur même s'il s'en écarte.
 export function Vehicle() {
   const { camera } = useThree()
   const meshRef = useRef<Mesh>(null)
-  const distanceRef = useRef(0)
-  const speedRef = useRef(0)
+  const pose = useRef({ x: 0, z: 0, heading: 0, speed: 0, odometer: 0, horizon: 0 })
+  const placeAtStart = () => {
+    const spawn = proceduralPath.findSpawn()
+    Object.assign(pose.current, {
+      x: spawn.x,
+      z: spawn.z,
+      heading: spawn.heading,
+      speed: 0,
+      odometer: 0,
+      horizon: spawn.arc,
+    })
+  }
   const generationRef = useRef(useGameStore.getState().generation)
   const fpsAccumulator = useRef({ frames: 0, elapsed: 0 })
-  const pathRevisionRef = useRef(-1)
   const controls = useRef(new KeyboardControls()).current
 
   useEffect(() => controls.attach(window), [controls])
+  useEffect(placeAtStart, [])
 
   useFrame((_, delta) => {
     const state = useGameStore.getState()
+    const p = pose.current
     if (state.generation !== generationRef.current) {
       generationRef.current = state.generation
-      distanceRef.current = 0
-      speedRef.current = 0
+      placeAtStart()
     }
 
-    const reverseSign = state.settings.drivingReverse ? -1 : 1
-    const throttle = controls.throttle() * reverseSign
+    const sinHeading = Math.sin(p.heading)
+    const cosHeading = Math.cos(p.heading)
+    const here = heightAt(p.x, p.z, proceduralPath)
+    const ahead = heightAt(
+      p.x + sinHeading * GRADE_SAMPLE,
+      p.z - cosHeading * GRADE_SAMPLE,
+      proceduralPath,
+    )
+    const grade = (ahead - here) / GRADE_SAMPLE
 
-    proceduralPath.update(distanceRef.current)
-    const probe = proceduralPath.getPointAt(distanceRef.current)
-    const planProbe = Math.hypot(probe.tangent.x, probe.tangent.z) || 1
-    const grade = probe.tangent.y / planProbe
-
-    speedRef.current = nextSpeed(speedRef.current, throttle, grade, delta)
-    distanceRef.current += speedRef.current * delta
-
-    proceduralPath.update(distanceRef.current)
-    const { position, tangent: pathTangent } = proceduralPath.getPointAt(distanceRef.current)
-    const travel = speedRef.current < -0.01 ? -1 : speedRef.current > 0.01 ? 1 : reverseSign
-    const tangent = pathTangent.clone().multiplyScalar(travel)
-    const planLength = Math.hypot(tangent.x, tangent.z) || 1
-    const forwardX = tangent.x / planLength
-    const forwardZ = tangent.z / planLength
-    const travelGrade = (tangent.y / planLength) * 100
-    const heading = Math.atan2(forwardX, -forwardZ) * RAD_TO_DEG
-
-    if (pathRevisionRef.current !== proceduralPath.revision) {
-      pathRevisionRef.current = proceduralPath.revision
-      state.setPathPointCount(proceduralPath.pointCount)
+    p.speed = nextSpeed(p.speed, controls.throttle(), grade, delta)
+    if (Math.abs(p.speed) > 0.01) {
+      const turnAuthority = Math.min(Math.abs(p.speed) / FULL_STEER_SPEED, 1)
+      p.heading += controls.steer() * TURN_RATE * turnAuthority * Math.sign(p.speed) * delta
     }
+    const moveX = Math.sin(p.heading)
+    const moveZ = -Math.cos(p.heading)
+    p.x += moveX * p.speed * delta
+    p.z += moveZ * p.speed * delta
+    p.odometer += Math.abs(p.speed) * delta
+
+    const road = proceduralPath.roadAt(p.x, p.z)
+    if (road.distance < ON_ROAD_DISTANCE) p.horizon = road.arc
+    proceduralPath.update(p.horizon)
+
+    const groundY =
+      road.bridge && road.distance < ROAD_HALF_WIDTH + 0.5
+        ? road.height
+        : heightAt(p.x, p.z, proceduralPath)
+    const target = new Vector3(p.x, groundY + VEHICLE_LIFT, p.z)
 
     const mesh = meshRef.current
     if (mesh) {
-      const target = new Vector3(position.x, position.y + VEHICLE_LIFT, position.z)
       mesh.position.copy(target)
-      mesh.lookAt(target.clone().add(tangent))
+      mesh.lookAt(target.x + moveX, target.y, target.z + moveZ)
 
       const { cameraDistance, cameraHeight, cameraYaw } = state.settings
-      const yaw = cameraYaw * DEG_TO_RAD
-      const backX = -forwardX
-      const backZ = -forwardZ
+      const yaw = (cameraYaw * Math.PI) / 180
+      const backX = -moveX
+      const backZ = -moveZ
       const offsetX = backX * Math.cos(yaw) - backZ * Math.sin(yaw)
       const offsetZ = backX * Math.sin(yaw) + backZ * Math.cos(yaw)
       camera.position.set(
@@ -79,12 +98,13 @@ export function Vehicle() {
       camera.lookAt(target)
     }
 
+    const headingDeg = (((p.heading * RAD_TO_DEG) % 360) + 360) % 360
     state.setPlayerState(
-      [position.x, position.y, position.z],
-      Math.abs(speedRef.current) * MS_TO_KMH,
-      distanceRef.current,
-      travelGrade,
-      heading,
+      [p.x, groundY, p.z],
+      Math.abs(p.speed) * MS_TO_KMH,
+      p.odometer,
+      grade * 100 * Math.sign(p.speed || 1),
+      headingDeg,
     )
 
     const acc = fpsAccumulator.current
@@ -92,6 +112,7 @@ export function Vehicle() {
     acc.elapsed += delta
     if (acc.elapsed >= 0.5) {
       state.setFps(Math.round(acc.frames / acc.elapsed))
+      state.setPathPointCount(proceduralPath.pointCount)
       acc.frames = 0
       acc.elapsed = 0
     }

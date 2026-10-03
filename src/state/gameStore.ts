@@ -12,8 +12,8 @@ import type { Season } from '../scene/seasons'
 export interface PlayerState {
   position: [number, number, number]
   speed: number // km/h
-  distanceTraveled: number // m, signée : négative quand on roule vers l'arrière
-  grade: number // %, pente de la route sous le véhicule dans le sens de conduite
+  distanceTraveled: number // m, distance parcourue (compteur)
+  grade: number // %, pente sous le véhicule dans le sens de déplacement
   heading: number // degrés, 0 = nord (-Z)
 }
 
@@ -24,7 +24,6 @@ export interface DebugState {
 
 export interface SettingsState {
   showContours: boolean
-  drivingReverse: boolean
   lookMode: boolean // ambiance ombrée : soleil, ombres, rendu facetté
   season: Season
   cameraDistance: number // m, recul de la caméra derrière le véhicule
@@ -51,7 +50,6 @@ interface GameStore {
   setFps: (fps: number) => void
   setPathPointCount: (count: number) => void
   toggleContours: () => void
-  toggleDrivingReverse: () => void
   toggleLookMode: () => void
   setSeason: (season: Season) => void
   setCameraDistance: (value: number) => void
@@ -67,20 +65,13 @@ function randomSeed(): number {
   return Math.floor(Math.random() * 0x100000000)
 }
 
-function seedFromUrl(): number | null {
-  const value = new URLSearchParams(window.location.search).get('seed')
-  if (value === null || value.trim() === '') return null
-  const parsed = Number(value)
-  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed >>> 0 : null
-}
-
 function applyWorld(seed: number, landscape: LandscapeParams) {
   setLandscapeParams(landscape)
   setLandscapeSeed(seed)
   proceduralPath.reset(seed)
 }
 
-const initialSeed = seedFromUrl() ?? randomSeed()
+const initialSeed = randomSeed()
 applyWorld(initialSeed, DEFAULT_LANDSCAPE)
 
 // subscribeWithSelector permet aux composants HUD de s'abonner à une seule
@@ -92,7 +83,6 @@ export const useGameStore = create<GameStore>()(
     debug: { fps: 0, pathPointCount: 0 },
     settings: {
       showContours: false,
-      drivingReverse: false,
       lookMode: false,
       season: 'été',
       cameraDistance: 11,
@@ -113,8 +103,6 @@ export const useGameStore = create<GameStore>()(
     setSeason: (season) => set((s) => ({ settings: { ...s.settings, season } })),
     toggleLookMode: () =>
       set((s) => ({ settings: { ...s.settings, lookMode: !s.settings.lookMode } })),
-    toggleDrivingReverse: () =>
-      set((s) => ({ settings: { ...s.settings, drivingReverse: !s.settings.drivingReverse } })),
     setCameraDistance: (cameraDistance) =>
       set((s) => ({ settings: { ...s.settings, cameraDistance } })),
     setCameraHeight: (cameraHeight) => set((s) => ({ settings: { ...s.settings, cameraHeight } })),

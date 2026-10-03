@@ -1,7 +1,10 @@
-const FORWARD_KEYS = ['ArrowUp', 'KeyW']
-const BACK_KEYS = ['ArrowDown', 'KeyS']
+// Touches par lettre (AZERTY : Z avance, S recule, Q gauche, D droite) et flèches.
+const FORWARD = ['z', 'w', 'arrowup']
+const BACK = ['s', 'arrowdown']
+const LEFT = ['q', 'a', 'arrowleft']
+const RIGHT = ['d', 'arrowright']
+const GAME_KEYS = [...FORWARD, ...BACK, ...LEFT, ...RIGHT]
 
-// Commandes clavier : Haut/W accélère, Bas/S freine ou recule à l'arrêt.
 export class KeyboardControls {
   private pressed = new Set<string>()
   private onKeyDown = (event: KeyboardEvent) => this.handle(event, true)
@@ -19,18 +22,26 @@ export class KeyboardControls {
     }
   }
 
-  // Entre -1 (frein) et 1 (accélérateur), dans le sens du tracé.
+  // Entre -1 (frein / marche arrière) et 1 (accélérateur).
   throttle(): number {
-    const forward = FORWARD_KEYS.some((key) => this.pressed.has(key)) ? 1 : 0
-    const back = BACK_KEYS.some((key) => this.pressed.has(key)) ? 1 : 0
-    return forward - back
+    return this.held(FORWARD) - this.held(BACK)
+  }
+
+  // Entre -1 (gauche) et 1 (droite).
+  steer(): number {
+    return this.held(RIGHT) - this.held(LEFT)
+  }
+
+  private held(keys: string[]): number {
+    return keys.some((key) => this.pressed.has(key)) ? 1 : 0
   }
 
   private handle(event: KeyboardEvent, down: boolean) {
     if (event.target instanceof HTMLInputElement) return
-    if (![...FORWARD_KEYS, ...BACK_KEYS].includes(event.code)) return
-    if (down) this.pressed.add(event.code)
-    else this.pressed.delete(event.code)
+    const key = event.key.toLowerCase()
+    if (!GAME_KEYS.includes(key)) return
+    if (down) this.pressed.add(key)
+    else this.pressed.delete(key)
     event.preventDefault()
   }
 }
