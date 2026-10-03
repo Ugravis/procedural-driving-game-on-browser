@@ -22,18 +22,30 @@ export function Vehicle() {
   const { camera } = useThree()
   const meshRef = useRef<Mesh>(null)
   const pose = useRef({ x: 0, z: 0, heading: 0, speed: 0, odometer: 0, horizon: 0 })
+  const placeAtStart = () => {
+    const spawn = proceduralPath.findSpawn()
+    Object.assign(pose.current, {
+      x: spawn.x,
+      z: spawn.z,
+      heading: spawn.heading,
+      speed: 0,
+      odometer: 0,
+      horizon: spawn.arc,
+    })
+  }
   const generationRef = useRef(useGameStore.getState().generation)
   const fpsAccumulator = useRef({ frames: 0, elapsed: 0 })
   const controls = useRef(new KeyboardControls()).current
 
   useEffect(() => controls.attach(window), [controls])
+  useEffect(placeAtStart, [])
 
   useFrame((_, delta) => {
     const state = useGameStore.getState()
     const p = pose.current
     if (state.generation !== generationRef.current) {
       generationRef.current = state.generation
-      Object.assign(p, { x: 0, z: 0, heading: 0, speed: 0, odometer: 0, horizon: 0 })
+      placeAtStart()
     }
 
     const sinHeading = Math.sin(p.heading)

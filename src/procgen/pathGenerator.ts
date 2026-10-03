@@ -32,6 +32,9 @@ const BRIDGE_MIN_SEGMENTS = 3 // segments, ~30 m
 const BRIDGE_MAX_SEGMENTS = 30 // segments, ~300 m
 const BRIDGE_HEADING_OFFSETS = [0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3] // rad, caps testés pour un tablier
 const WATER_CLEARANCE = 1.5 // m, hauteur minimale du tablier au-dessus de l'eau
+const SPAWN_SEARCH_LENGTH = 4000 // m, distance explorée pour trouver un départ
+const SPAWN_MAX_SLOPE = 0.03 // pente max au départ (3 %)
+const SPAWN_WATER_MARGIN = 3 // m, hauteur minimale au-dessus de l'eau au départ
 
 const WANDER_SALT = 1
 const DIRECTION_SALT = 2
@@ -186,6 +189,34 @@ export class ProceduralPath {
       }
     }
     return { height, distance: Math.sqrt(bestDistSq), bridge, arc }
+  }
+
+  /**
+   * Point de départ : premier point de la route, dans les 4 km, qui est plat et
+   * hors de l'eau. Renvoie la position, le cap et la distance le long du tracé.
+   */
+  findSpawn(): { x: number; z: number; heading: number; arc: number } {
+    const waterLevel = getLandscapeParams().waterLevel
+    this.update(SPAWN_SEARCH_LENGTH)
+    for (
+      let index = SUBSAMPLES;
+      index < SPAWN_SEARCH_LENGTH / SAMPLE_SPACING;
+      index += SUBSAMPLES
+    ) {
+      const a = this.samples.get(index)
+      const b = this.samples.get(index + SUBSAMPLES)
+      if (!a || !b) break
+      const slope = Math.abs(b.y - a.y) / SEGMENT_LENGTH
+      if (slope < SPAWN_MAX_SLOPE && a.y > waterLevel + SPAWN_WATER_MARGIN) {
+        return {
+          x: a.x,
+          z: a.z,
+          heading: Math.atan2(b.x - a.x, -(b.z - a.z)),
+          arc: index * SAMPLE_SPACING,
+        }
+      }
+    }
+    return { x: 0, z: 0, heading: 0, arc: 0 }
   }
 
   /** Segments de route (hors tabliers) dont au moins une extrémité touche la zone. */
