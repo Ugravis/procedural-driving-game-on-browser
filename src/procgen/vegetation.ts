@@ -9,7 +9,6 @@ const DENSITY = 0.45 // probabilité qu'une cellule contienne un arbre
 
 export interface VegetationInstance {
   position: [number, number, number]
-  rotationY: number
   scale: number
 }
 
@@ -48,7 +47,6 @@ export function scatterVegetation(
 
       instances.push({
         position: [jitterX, heightAt(jitterX, jitterZ, path), jitterZ],
-        rotationY: hash(jitterX, jitterZ) * Math.PI * 2,
         scale: 0.7 + hash(jitterZ, jitterX) * 0.6,
       })
     }
