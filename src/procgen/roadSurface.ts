@@ -7,21 +7,19 @@ const MARGIN = ROAD_HALF_WIDTH + 2 // m, déborde du chunk pour que les bords ne
 
 /**
  * Surface de route plane d'un chunk : une bande posée sur la ligne centrale,
- * dont chaque sommet suit le relief du terrain. Construite avec le chunk, elle
- * apparaît et disparaît avec lui. Coordonnées locales au chunk. Les tabliers
- * sont exclus (ils sont rendus à part, à leur hauteur réelle).
+ * dont chaque sommet suit le relief du terrain. Les segments sont ceux du tracé
+ * complet qui touchent le chunk, donc la surface ne dépend pas de la position
+ * du joueur. Coordonnées locales au chunk. Les tabliers sont exclus.
  */
 export function buildRoadSurface(
   chunkX: number,
   chunkZ: number,
   path: ProceduralPath,
 ): BufferGeometry {
-  const { points, bridge } = path.getCentreline()
   const originX = chunkX * CHUNK_SIZE
   const originZ = chunkZ * CHUNK_SIZE
   const half = CHUNK_SIZE / 2 + MARGIN
-  const inside = (p: { x: number; z: number }) =>
-    Math.abs(p.x - originX) <= half && Math.abs(p.z - originZ) <= half
+  const segments = path.segmentsIn(originX - half, originX + half, originZ - half, originZ + half)
 
   const positions: number[] = []
   const indices: number[] = []
@@ -30,12 +28,7 @@ export function buildRoadSurface(
     positions.push(x - originX, heightAt(x, z, path) + SURFACE_OFFSET, z - originZ)
   }
 
-  for (let i = 0; i < points.length - 1; i++) {
-    if (bridge[i]) continue
-    const a = points[i]!
-    const b = points[i + 1]!
-    if (!inside(a) && !inside(b)) continue
-
+  for (const { a, b } of segments) {
     const dx = b.x - a.x
     const dz = b.z - a.z
     const length = Math.hypot(dx, dz) || 1
