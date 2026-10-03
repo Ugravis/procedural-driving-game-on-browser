@@ -32,12 +32,12 @@ function smoothstep(edge0: number, edge1: number, value: number): number {
 }
 
 /** Probabilité qu'une cellule de dispersion contienne un arbre, selon la pente locale. */
-export function treeDensity(x: number, z: number, slope: number): number {
+export function treeDensity(x: number, z: number, slope: number, weights: number[]): number {
   if (slope > MAX_SLOPE) return 0
   const grove = smoothstep(GROVE_START, GROVE_FULL, groveFactor(x, z))
   return (
     (CLEARING_DENSITY + (GROVE_DENSITY - CLEARING_DENSITY) * grove) *
-    vegetationFactor(biomeWeights(x, z)) *
+    vegetationFactor(weights) *
     (1 - slope / MAX_SLOPE)
   )
 }
@@ -71,7 +71,7 @@ export function scatterVegetation(
       if (isUnderWater(x, z)) continue
 
       const slope = slopeAt(x, z, path)
-      const density = treeDensity(x, z, slope)
+      const density = treeDensity(x, z, slope, biomeWeights(x, z))
       if (hash(cellX, cellZ) > density) continue
 
       const { distance } = path.roadAt(x, z)

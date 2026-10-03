@@ -18,7 +18,7 @@ const ZOOM_RANGES = [250, 500, 1000, 2000, 4000, 8000, 16000] // m, demi-côté 
 const DEFAULT_ZOOM = 3
 const CELLS_ACROSS = 100 // nombre de cellules de relief sur la largeur de la carte agrandie
 const CONTOUR_INTERVAL = 10 // m, écart entre courbes de niveau
-const REFRESH_MS = 250
+const REFRESH_MS = 500
 const DEG_TO_RAD = Math.PI / 180
 
 const WATER = '#1f4e6b'
@@ -187,6 +187,62 @@ export function Minimap() {
   )
 }
 
+interface TerrainSample {
+  bands: number[][]
+  heights: number[][]
+  wet: boolean[][]
+  land: string[][]
+  weights: number[][][]
+}
+
+let terrainCache: { key: string; sample: TerrainSample } | null = null
+
+// Le relief de la minimap ne change que si la vue bouge ou si le tracé évolue :
+// on le garde en mémoire entre deux rafraîchissements.
+function sampleTerrain(
+  originX: number,
+  originZ: number,
+  cell: number,
+  cells: number,
+  waterLevel: number,
+): TerrainSample {
+  const key = [originX, originZ, cell, cells, waterLevel, proceduralPath.revision].join(':')
+  if (terrainCache?.key === key) return terrainCache.sample
+
+  // Même hauteur que le terrain 3D (route aplanie comprise), pour que l'eau coïncide.
+  const bands: number[][] = []
+  const heights: number[][] = []
+  const wet: boolean[][] = []
+  const land: string[][] = []
+  const weights: number[][][] = []
+  for (let j = 0; j < cells; j++) {
+    const row: number[] = []
+    const wetRow: boolean[] = []
+    const landRow: string[] = []
+    const heightRow: number[] = []
+    const weightRow: number[][] = []
+    for (let i = 0; i < cells; i++) {
+      const worldX = originX + (i + 0.5) * cell
+      const worldZ = originZ + (j + 0.5) * cell
+      const height = heightAt(worldX, worldZ, proceduralPath)
+      heightRow.push(height)
+      wetRow.push(height < waterLevel)
+      row.push(Math.floor(height / CONTOUR_INTERVAL))
+      const cellWeights = biomeWeights(worldX, worldZ)
+      weightRow.push(cellWeights)
+      landRow.push(mapColour(cellWeights))
+    }
+    bands.push(row)
+    heights.push(heightRow)
+    weights.push(weightRow)
+    wet.push(wetRow)
+    land.push(landRow)
+  }
+  const sample = { bands, heights, wet, land, weights }
+  terrainCache = { key, sample }
+  return sample
+}
+
 function drawMinimap(context: CanvasRenderingContext2D, view: MapView, pan: Pan) {
   const player = useGameStore.getState().player
   const [playerX, , playerZ] = player.position
@@ -202,30 +258,13 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView, pan: Pan)
   const cellPx = cell * scale
   const waterLevel = getLandscapeParams().waterLevel
 
-  // Même hauteur que le terrain 3D (route aplanie comprise), pour que l'eau coïncide.
-  const bands: number[][] = []
-  const heights: number[][] = []
-  const wet: boolean[][] = []
-  const land: string[][] = []
-  for (let j = 0; j < cells; j++) {
-    const row: number[] = []
-    const wetRow: boolean[] = []
-    const landRow: string[] = []
-    const heightRow: number[] = []
-    for (let i = 0; i < cells; i++) {
-      const worldX = originX + (i + 0.5) * cell
-      const worldZ = originZ + (j + 0.5) * cell
-      const height = heightAt(worldX, worldZ, proceduralPath)
-      heightRow.push(height)
-      wetRow.push(height < waterLevel)
-      row.push(Math.floor(height / CONTOUR_INTERVAL))
-      landRow.push(mapColour(biomeWeights(worldX, worldZ)))
-    }
-    bands.push(row)
-    heights.push(heightRow)
-    wet.push(wetRow)
-    land.push(landRow)
-  }
+  const { bands, heights, wet, land, weights } = sampleTerrain(
+    originX,
+    originZ,
+    cell,
+    cells,
+    waterLevel,
+  )
 
   context.clearRect(0, 0, size, size)
   for (let j = 0; j < cells; j++) {
@@ -249,7 +288,7 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView, pan: Pan)
     }
   }
 
-  drawForest(context, heights, wet, cell, cellPx, originX, originZ)
+  drawForest(context, heights, weights, wet, cell, cellPx, originX, originZ)
   if (range <= TREE_DOT_RANGE) {
     drawTrees(context, originX, originZ, range, toPixelX, toPixelZ, scale)
   }
@@ -308,6 +347,7 @@ function updateLabels(biome: HTMLSpanElement | null, altitude: HTMLSpanElement |
 function drawForest(
   context: CanvasRenderingContext2D,
   heights: number[][],
+  weights: number[][][],
   wet: boolean[][],
   cell: number,
   cellPx: number,
@@ -324,7 +364,12 @@ function drawForest(
           heights[Math.min(j + 1, last)]![i]! - heights[Math.max(j - 1, 0)]![i]!,
         ) /
         (2 * cell)
-      const density = treeDensity(originX + (i + 0.5) * cell, originZ + (j + 0.5) * cell, slope)
+      const density = treeDensity(
+        originX + (i + 0.5) * cell,
+        originZ + (j + 0.5) * cell,
+        slope,
+        weights[j]![i]!,
+      )
       if (density <= 0) continue
       context.fillStyle = `rgba(18, 52, 24, ${Math.min(density, 1) * FOREST_ALPHA})`
       context.fillRect(i * cellPx, j * cellPx, cellPx + 1, cellPx + 1)
@@ -363,14 +408,15 @@ function drawTrees(
   const minZ = Math.floor((originZ - CHUNK_SIZE / 2) / CHUNK_SIZE)
   const maxZ = Math.ceil((originZ + 2 * range + CHUNK_SIZE / 2) / CHUNK_SIZE)
   context.fillStyle = TREE_COLOUR
+  context.beginPath()
   for (let cz = minZ; cz <= maxZ; cz++) {
     for (let cx = minX; cx <= maxX; cx++) {
       for (const tree of treesInChunk(cx, cz)) {
         const [x, , z] = tree.position
-        context.beginPath()
+        context.moveTo(toPixelX(x) + Math.max(1.2, tree.scale * scale), toPixelZ(z))
         context.arc(toPixelX(x), toPixelZ(z), Math.max(1.2, tree.scale * scale), 0, Math.PI * 2)
-        context.fill()
       }
     }
   }
+  context.fill()
 }
