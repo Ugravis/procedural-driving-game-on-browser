@@ -38,6 +38,8 @@ export function ChunkVegetation({ chunkX, chunkZ }: ChunkVegetationProps) {
   if (instances.length === 0) return null
 
   return (
-    <instancedMesh ref={meshRef} args={[treeGeometry(), treeMaterial(season), instances.length]} />
+    <instancedMesh ref={meshRef} args={[treeGeometry(), undefined, instances.length]}>
+      <primitive object={treeMaterial(season)} attach="material" />
+    </instancedMesh>
   )
 }
