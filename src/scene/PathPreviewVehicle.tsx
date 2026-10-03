@@ -18,6 +18,7 @@ export function PathPreviewVehicle() {
   const distanceRef = useRef(0)
   const generationRef = useRef(useGameStore.getState().generation)
   const fpsAccumulator = useRef({ frames: 0, elapsed: 0 })
+  const pathRevisionRef = useRef(-1)
 
   useFrame((_, delta) => {
     const state = useGameStore.getState()
@@ -30,6 +31,10 @@ export function PathPreviewVehicle() {
     distanceRef.current += direction * (SPEED_KMH / 3.6) * delta
 
     proceduralPath.update(distanceRef.current)
+    if (pathRevisionRef.current !== proceduralPath.revision) {
+      pathRevisionRef.current = proceduralPath.revision
+      state.setPathPointCount(proceduralPath.pointCount)
+    }
     const { position, tangent: pathTangent } = proceduralPath.getPointAt(distanceRef.current)
     const tangent = pathTangent.clone().multiplyScalar(direction)
     const planLength = Math.hypot(tangent.x, tangent.z) || 1

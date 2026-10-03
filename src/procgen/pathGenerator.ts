@@ -24,13 +24,15 @@ const MIN_SEPARATION = 400 // m, longueur d'arc à partir de laquelle un point e
 const COLLISION_PENALTY = 1000 // pénalité d'un cap qui recroise le tracé
 const LOOKAHEAD_WEIGHT = 0.7 // poids du meilleur coût au segment suivant dans le choix d'un cap
 const GRID_CELL = 20 // m, taille des cellules de recherche spatiale
-const AHEAD_BUFFER = 300 // m, distance fournie devant la position courante
-const BEHIND_BUFFER = 50 // m, distance fournie derrière la position courante
+const AHEAD_BUFFER = 400 // m, distance fournie devant la position courante (couvre le terrain chargé)
+const BEHIND_BUFFER = 400 // m, distance fournie derrière la position courante (conduite arrière)
 const WATER_LOOKAHEAD = 120 // m, distance regardée devant pour anticiper un lac
 const BRIDGE_MIN_SEGMENTS = 3 // segments, ~30 m
 const BRIDGE_MAX_SEGMENTS = 30 // segments, ~300 m
 const BRIDGE_HEADING_OFFSETS = [0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3] // rad, caps testés pour un tablier
 const WATER_CLEARANCE = 1.5 // m, hauteur minimale du tablier au-dessus de l'eau
+
+const DENSE_PER_POINT = 4 // échantillons de courbe par point de contrôle, pour suivre la courbe au mètre près
 
 const WANDER_SALT = 1
 const DIRECTION_SALT = 2
@@ -84,6 +86,7 @@ export class ProceduralPath {
   private windowFirst = Number.NaN
   private windowLast = Number.NaN
   private window: PathPoint[] = []
+  private dense: Vector3[] = []
   private curve = new CatmullRomCurve3()
   revision = 0
 
@@ -136,10 +139,10 @@ export class ProceduralPath {
   roadAt(x: number, z: number): { height: number; distance: number; bridge: boolean } {
     let bestDistSq = Infinity
     let height = 0
-    let bridge = false
-    for (let i = 0; i < this.window.length - 1; i++) {
-      const a = this.window[i]!.position
-      const b = this.window[i + 1]!.position
+    const dense = this.dense
+    for (let i = 0; i < dense.length - 1; i++) {
+      const a = dense[i]!
+      const b = dense[i + 1]!
       const abx = b.x - a.x
       const abz = b.z - a.z
       const lengthSq = abx * abx + abz * abz
@@ -151,10 +154,24 @@ export class ProceduralPath {
       if (distSq < bestDistSq) {
         bestDistSq = distSq
         height = a.y + (b.y - a.y) * t
-        bridge = this.window[i + 1]!.bridge
       }
     }
-    return { height, distance: Math.sqrt(bestDistSq), bridge }
+    return { height, distance: Math.sqrt(bestDistSq), bridge: this.nearestPoint(x, z).bridge }
+  }
+
+  private nearestPoint(x: number, z: number): PathPoint {
+    let best = this.window[0]!
+    let bestDistSq = Infinity
+    for (const p of this.window) {
+      const dx = p.position.x - x
+      const dz = p.position.z - z
+      const distSq = dx * dx + dz * dz
+      if (distSq < bestDistSq) {
+        bestDistSq = distSq
+        best = p
+      }
+    }
+    return best
   }
 
   getPointAt(distance: number): { position: Vector3; tangent: Vector3 } {
@@ -186,6 +203,7 @@ export class ProceduralPath {
       if (p.distance >= first && p.distance <= lastDistance) this.window.push(p)
     }
     this.curve = new CatmullRomCurve3(this.window.map((p) => p.position))
+    this.dense = this.curve.getSpacedPoints(this.window.length * DENSE_PER_POINT)
     return true
   }
 

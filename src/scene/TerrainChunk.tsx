@@ -31,7 +31,7 @@ export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
   return (
     <group position={position}>
       <mesh geometry={geometry}>
-        <meshStandardMaterial color="#4a6b4a" />
+        <meshStandardMaterial vertexColors />
       </mesh>
       {contours && (
         <lineSegments geometry={contours}>
