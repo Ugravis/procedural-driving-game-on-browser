@@ -23,7 +23,10 @@ const GLOBAL_DIRECTION_FREQUENCY = 0.0002 // 1/m, la direction générale change
 const GLOBAL_DIRECTION_RANGE = 1 // rad, écart max de la direction générale à l'axe initial
 const GLOBAL_DIRECTION_WEIGHT = 0.3 // poids de l'écart à la direction générale dans le coût
 const CLEARANCE = 8 // m, distance minimale à un point ancien (évite les croisements)
-const MIN_SEPARATION = 400 // m, longueur d'arc à partir de laquelle un point est "ancien"
+const PARALLEL_DISTANCE = 50 // m, en dessous, un tronçon ancien est trop proche (route parallèle)
+const PARALLEL_WEIGHT = 15 // poids de la proximité d'un tronçon ancien dans le coût d'un cap
+const PARALLEL_MIN_ARC = 150 // m, longueur d'arc à partir de laquelle un tronçon ancien compte pour le parallélisme
+const MIN_SEPARATION = 60 // m, longueur d'arc au-delà de laquelle un tronçon peut être recroisé
 const COLLISION_PENALTY = 1000 // pénalité d'un cap qui recroise le tracé
 const LOOKAHEAD_WEIGHT = 0.7 // poids du meilleur coût au segment suivant dans le choix d'un cap
 const GRID_CELL = 20 // m, taille des cellules de recherche spatiale
@@ -63,6 +66,7 @@ interface Candidate {
   position: Vector3
   cost: number
   obstacle: boolean // eau ou pente au point candidat
+  underWater: boolean // le point candidat est sous le niveau de l'eau
 }
 
 interface Visited {
@@ -344,7 +348,7 @@ export class ProceduralPath {
 
     if (
       (step.obstacle || this.waterAhead(from.position, fromHeading)) &&
-      this.canBridge(fromDistance, direction)
+      (step.underWater || this.canBridge(fromDistance, direction))
     ) {
       const deck = this.tryBridge(from.position, fromHeading, direction, fromDistance)
       if (deck) {
@@ -527,9 +531,16 @@ export class ProceduralPath {
       GLOBAL_DIRECTION_WEIGHT * Math.abs(angleDifference(heading, targetHeading)) +
       (steep ? STEEP_PENALTY : 0) +
       (underWater ? WATER_PENALTY : 0) +
-      (this.collides(x, z, distance) ? COLLISION_PENALTY : 0)
+      (this.collides(x, z, distance) ? COLLISION_PENALTY : 0) +
+      PARALLEL_WEIGHT * this.parallelness(x, z, distance)
 
-    return { heading, position: new Vector3(x, y, z), cost, obstacle: underWater || steep }
+    return {
+      heading,
+      position: new Vector3(x, y, z),
+      cost,
+      obstacle: underWater || steep,
+      underWater,
+    }
   }
 
   private recordVisited(position: Vector3, distance: number) {
@@ -538,6 +549,23 @@ export class ProceduralPath {
     const cell = this.visited.get(key)
     if (cell) cell.push(visited)
     else this.visited.set(key, [visited])
+  }
+
+  // 0 si le point est loin de tout tronçon ancien, 1 s'il le touche.
+  private parallelness(x: number, z: number, distance: number): number {
+    const cx = Math.floor(x / GRID_CELL)
+    const cz = Math.floor(z / GRID_CELL)
+    let worst = 0
+    for (let i = cx - 2; i <= cx + 2; i++) {
+      for (let j = cz - 2; j <= cz + 2; j++) {
+        for (const visited of this.visited.get(`${i}:${j}`) ?? []) {
+          if (Math.abs(visited.distance - distance) <= PARALLEL_MIN_ARC) continue
+          const dist = Math.hypot(visited.x - x, visited.z - z)
+          if (dist < PARALLEL_DISTANCE) worst = Math.max(worst, 1 - dist / PARALLEL_DISTANCE)
+        }
+      }
+    }
+    return worst
   }
 
   private collides(x: number, z: number, distance: number): boolean {
