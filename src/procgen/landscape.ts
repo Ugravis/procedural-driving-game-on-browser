@@ -1,9 +1,9 @@
 import { createNoise2D } from 'simplex-noise'
 
-const HEIGHT_SCALE = 12 // m, amplitude du relief
-const FREQUENCY = 0.004 // collines de l'ordre de la centaine de mètres
+const HEIGHT_SCALE = 40 // m, amplitude du relief
+const FREQUENCY = 0.001 // collines de l'ordre du kilomètre
 const OCTAVES = 2
-const PERSISTENCE = 0.5
+const PERSISTENCE = 0.4
 
 const noise2D = createNoise2D()
 
