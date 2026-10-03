@@ -31,7 +31,18 @@ function smoothstep(edge0: number, edge1: number, value: number): number {
   return t * t * (3 - 2 * t)
 }
 
-function slopeAt(x: number, z: number, path: ProceduralPath): number {
+/** Probabilité qu'une cellule de dispersion contienne un arbre, selon la pente locale. */
+export function treeDensity(x: number, z: number, slope: number, weights: number[]): number {
+  if (slope > MAX_SLOPE) return 0
+  const grove = smoothstep(GROVE_START, GROVE_FULL, groveFactor(x, z))
+  return (
+    (CLEARING_DENSITY + (GROVE_DENSITY - CLEARING_DENSITY) * grove) *
+    vegetationFactor(weights) *
+    (1 - slope / MAX_SLOPE)
+  )
+}
+
+export function slopeAt(x: number, z: number, path: ProceduralPath): number {
   const dx = heightAt(x + SLOPE_PROBE, z, path) - heightAt(x - SLOPE_PROBE, z, path)
   const dz = heightAt(x, z + SLOPE_PROBE, path) - heightAt(x, z - SLOPE_PROBE, path)
   return Math.hypot(dx, dz) / (2 * SLOPE_PROBE)
@@ -60,14 +71,7 @@ export function scatterVegetation(
       if (isUnderWater(x, z)) continue
 
       const slope = slopeAt(x, z, path)
-      if (slope > MAX_SLOPE) continue
-      const weights = biomeWeights(x, z)
-      const slopeFactor = 1 - slope / MAX_SLOPE
-      const grove = smoothstep(GROVE_START, GROVE_FULL, groveFactor(x, z))
-      const density =
-        (CLEARING_DENSITY + (GROVE_DENSITY - CLEARING_DENSITY) * grove) *
-        vegetationFactor(weights) *
-        slopeFactor
+      const density = treeDensity(x, z, slope, biomeWeights(x, z))
       if (hash(cellX, cellZ) > density) continue
 
       const { distance } = path.roadAt(x, z)
