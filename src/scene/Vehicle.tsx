@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
-import { Vector3, type Group } from 'three'
+import { useEffect, useMemo, useRef } from 'react'
+import { Object3D, Vector3, type Group } from 'three'
 import { proceduralPath, ROAD_HALF_WIDTH } from '../procgen/pathGenerator'
 import { heightAt } from '../procgen/terrain'
 import { useGameStore } from '../state/gameStore'
@@ -22,6 +22,9 @@ const WHEEL_POSITIONS: [number, number][] = [
 const MS_TO_KMH = 3.6
 const HEADLIGHT_OFF = 0.1
 const HEADLIGHT_ON = 1.5
+const BEAM_INTENSITY = 60 // candela, faisceau des projecteurs allumés
+const BEAM_REACH = 40 // m
+const BEAM_X = [0.35, -0.35]
 const REARLIGHT_OFF = 0.2
 const REARLIGHT_ON = 2
 
@@ -143,6 +146,7 @@ export function Vehicle() {
   const lightsOn = useGameStore((s) => s.lightsOn)
   const braking = useGameStore((s) => s.braking)
   const headlight = lightsOn ? HEADLIGHT_ON : HEADLIGHT_OFF
+  const beamTargets = useMemo(() => BEAM_X.map(() => new Object3D()), [])
   const rearlight = lightsOn || braking ? REARLIGHT_ON : REARLIGHT_OFF
 
   return (
@@ -160,6 +164,21 @@ export function Vehicle() {
           <cylinderGeometry args={[0.3, 0.3, 0.22, 12]} />
           <meshStandardMaterial color="#1e1e1e" />
         </mesh>
+      ))}
+      {BEAM_X.map((x, i) => (
+        <group key={`beam-${x}`}>
+          <spotLight
+            position={[x, 0.05, 1.2]}
+            target={beamTargets[i]!}
+            intensity={lightsOn ? BEAM_INTENSITY : 0}
+            angle={0.45}
+            penumbra={0.5}
+            distance={BEAM_REACH}
+            decay={2}
+            color="#fff3d0"
+          />
+          <primitive object={beamTargets[i]!} position={[x, 0, BEAM_REACH / 2]} />
+        </group>
       ))}
       {[0.35, -0.35].map((x) => (
         <mesh key={`head-${x}`} position={[x, 0.05, 1.11]}>
