@@ -7,25 +7,32 @@ import { useGameStore } from '../state/gameStore'
 import { KeyboardControls } from '../vehicle/controls'
 import { nextSpeed } from '../vehicle/physics'
 
-const CAR_WIDTH = 1.8 // m
-const CAR_LENGTH = 4.2 // m
-const WHEEL_RADIUS = 0.35 // m, l'origine du véhicule est au centre des roues
-const WHEEL_WIDTH = 0.25 // m
-const CHASSIS_BOTTOM = 0.2 // m, le châssis chevauche le haut des roues
-const CHASSIS_HEIGHT = 0.5 // m
-const CHASSIS_Y = CHASSIS_BOTTOM + CHASSIS_HEIGHT / 2
-const CHASSIS_TOP = CHASSIS_BOTTOM + CHASSIS_HEIGHT
-const CAB_LENGTH = 1.5 // m, cabine courte à l'avant
-const CAB_WIDTH = 1.7 // m
-const CAB_HEIGHT = 0.5 // m
-const CAB_Z = 1.35 // m, centre de la cabine, au-dessus de l'essieu avant
-const CAB_Y = CHASSIS_TOP + CAB_HEIGHT / 2
-const BED_LENGTH = 2.6 // m, plateau arrière long et ouvert
-const BED_Z = -0.8 // m, centre du plateau
-const BED_FLOOR_Y = CHASSIS_TOP + 0.04
-const BED_WALL_HEIGHT = 0.3 // m
-const BED_WALL_THICKNESS = 0.06 // m
-const LIGHT_Y = CHASSIS_Y // m, hauteur des feux
+// Dimensions proches d'un Ford Ranger double cabine.
+const CAR_WIDTH = 1.85 // m
+const CAR_LENGTH = 5.3 // m
+const WHEELBASE = 3.2 // m
+const TRACK = 1.6 // m
+const WHEEL_RADIUS = 0.4 // m, l'origine du véhicule est au centre des roues
+const WHEEL_WIDTH = 0.3 // m
+const HULL_BOTTOM = -0.17 // m, garde au sol d'environ 23 cm
+const HULL_TOP = 0.2 // m, plancher et châssis
+const HULL_Y = (HULL_BOTTOM + HULL_TOP) / 2
+const HOOD_TOP = 0.55 // m, capot
+const HOOD_Z = 0.85 // m, la cabine commence ici
+const HOOD_Y = (HULL_TOP + HOOD_TOP) / 2
+const CAB_BACK_Z = -1.15 // m
+const CAB_WIDTH = 1.75 // m
+const CAB_ROOF = 1.4 // m
+const CAB_Y = (HOOD_TOP + CAB_ROOF) / 2
+const CAB_LENGTH = HOOD_Z - CAB_BACK_Z
+const BED_FRONT_Z = CAB_BACK_Z
+const BED_BACK_Z = -CAR_LENGTH / 2
+const BED_LENGTH = BED_FRONT_Z - BED_BACK_Z
+const BED_Z = (BED_FRONT_Z + BED_BACK_Z) / 2
+const BED_FLOOR_TOP = 0.2
+const BED_WALL_TOP = 0.6
+const BED_WALL_THICKNESS = 0.05
+const LIGHT_Y = 0.45 // m, hauteur des feux
 const VEHICLE_LIFT = WHEEL_RADIUS // m, origine au centre des roues, au-dessus du sol
 const TURN_RATE = 1.2 // rad/s, braquage à pleine vitesse
 const FULL_STEER_SPEED = 5 // m/s, en dessous le braquage est réduit
@@ -33,17 +40,17 @@ const ON_ROAD_DISTANCE = 30 // m, au-delà on considère qu'on a quitté la rout
 const GRADE_SAMPLE = 2 // m, distance d'échantillonnage de la pente devant
 const RAD_TO_DEG = 180 / Math.PI
 const WHEEL_POSITIONS: [number, number][] = [
-  [CAR_WIDTH / 2 - 0.05, 1.45],
-  [-(CAR_WIDTH / 2 - 0.05), 1.45],
-  [CAR_WIDTH / 2 - 0.05, -1.45],
-  [-(CAR_WIDTH / 2 - 0.05), -1.45],
+  [TRACK / 2, WHEELBASE / 2],
+  [-TRACK / 2, WHEELBASE / 2],
+  [TRACK / 2, -WHEELBASE / 2],
+  [-TRACK / 2, -WHEELBASE / 2],
 ]
 const MS_TO_KMH = 3.6
 const HEADLIGHT_OFF = 0.1
 const HEADLIGHT_ON = 1.5
 const BEAM_INTENSITY = 60 // candela, faisceau des projecteurs allumés
 const BEAM_REACH = 80 // m
-const BEAM_X = [0.6, -0.6]
+const BEAM_X = [0.7, -0.7]
 const REARLIGHT_OFF = 0.2
 const REARLIGHT_ON = 2
 
@@ -170,20 +177,33 @@ export function Vehicle() {
 
   return (
     <group ref={meshRef}>
-      <mesh castShadow position={[0, CHASSIS_Y, 0]}>
-        <boxGeometry args={[CAR_WIDTH, CHASSIS_HEIGHT, CAR_LENGTH]} />
+      <mesh castShadow position={[0, HULL_Y, 0]}>
+        <boxGeometry args={[CAR_WIDTH, HULL_TOP - HULL_BOTTOM, CAR_LENGTH]} />
         <meshStandardMaterial color="orange" />
       </mesh>
-      <mesh castShadow position={[0, CAB_Y, CAB_Z]}>
-        <boxGeometry args={[CAB_WIDTH, CAB_HEIGHT, CAB_LENGTH]} />
+      <mesh castShadow position={[0, HOOD_Y, (HOOD_Z + CAR_LENGTH / 2) / 2]}>
+        <boxGeometry args={[CAR_WIDTH, HOOD_TOP - HULL_TOP, CAR_LENGTH / 2 - HOOD_Z]} />
         <meshStandardMaterial color="orange" />
       </mesh>
-      <mesh position={[0, CAB_Y + 0.05, CAB_Z + CAB_LENGTH / 2 - 0.1]} rotation={[-0.45, 0, 0]}>
-        <boxGeometry args={[CAB_WIDTH - 0.2, CAB_HEIGHT * 0.8, 0.02]} />
+      <mesh castShadow position={[0, CAB_Y, (CAB_BACK_Z + HOOD_Z) / 2]}>
+        <boxGeometry args={[CAB_WIDTH, CAB_ROOF - HOOD_TOP, CAB_LENGTH]} />
+        <meshStandardMaterial color="orange" />
+      </mesh>
+      <mesh position={[0, 1.0, HOOD_Z - 0.1]} rotation={[-0.9, 0, 0]}>
+        <boxGeometry args={[CAB_WIDTH - 0.15, 0.85, 0.03]} />
         <meshStandardMaterial color="#2b3a42" />
       </mesh>
-      <mesh position={[0, BED_FLOOR_Y, BED_Z]} castShadow>
-        <boxGeometry args={[CAR_WIDTH - 2 * BED_WALL_THICKNESS, 0.08, BED_LENGTH]} />
+      {[1, -1].map((side) => (
+        <mesh
+          key={`window-${side}`}
+          position={[side * (CAB_WIDTH / 2 + 0.005), 1.0, (CAB_BACK_Z + HOOD_Z) / 2]}
+        >
+          <boxGeometry args={[0.02, 0.4, CAB_LENGTH - 0.4]} />
+          <meshStandardMaterial color="#2b3a42" />
+        </mesh>
+      ))}
+      <mesh position={[0, BED_FLOOR_TOP - 0.025, BED_Z]} castShadow>
+        <boxGeometry args={[CAR_WIDTH - 2 * BED_WALL_THICKNESS, 0.05, BED_LENGTH]} />
         <meshStandardMaterial color="#3a3a3a" />
       </mesh>
       {[1, -1].map((side) => (
@@ -192,18 +212,19 @@ export function Vehicle() {
           castShadow
           position={[
             side * (CAR_WIDTH / 2 - BED_WALL_THICKNESS / 2),
-            BED_FLOOR_Y + BED_WALL_HEIGHT / 2,
+            (BED_FLOOR_TOP + BED_WALL_TOP) / 2,
             BED_Z,
           ]}
         >
-          <boxGeometry args={[BED_WALL_THICKNESS, BED_WALL_HEIGHT, BED_LENGTH]} />
+          <boxGeometry args={[BED_WALL_THICKNESS, BED_WALL_TOP - BED_FLOOR_TOP, BED_LENGTH]} />
           <meshStandardMaterial color="orange" />
         </mesh>
       ))}
-      <mesh castShadow position={[0, BED_FLOOR_Y + BED_WALL_HEIGHT / 2, BED_Z - BED_LENGTH / 2]}>
-        <boxGeometry
-          args={[CAR_WIDTH - 2 * BED_WALL_THICKNESS, BED_WALL_HEIGHT, BED_WALL_THICKNESS]}
-        />
+      <mesh
+        castShadow
+        position={[0, (BED_FLOOR_TOP + BED_WALL_TOP) / 2, BED_BACK_Z + BED_WALL_THICKNESS / 2]}
+      >
+        <boxGeometry args={[CAR_WIDTH, BED_WALL_TOP - BED_FLOOR_TOP, BED_WALL_THICKNESS]} />
         <meshStandardMaterial color="orange" />
       </mesh>
       {WHEEL_POSITIONS.map(([x, z], i) => (
@@ -229,13 +250,13 @@ export function Vehicle() {
       ))}
       {BEAM_X.map((x) => (
         <mesh key={`head-${x}`} position={[x, LIGHT_Y, CAR_LENGTH / 2 + 0.01]}>
-          <boxGeometry args={[0.3, 0.15, 0.02]} />
+          <boxGeometry args={[0.35, 0.15, 0.02]} />
           <meshStandardMaterial color="#fff6c8" emissive="#fff6c8" emissiveIntensity={headlight} />
         </mesh>
       ))}
       {BEAM_X.map((x) => (
         <mesh key={`tail-${x}`} position={[x, LIGHT_Y, -CAR_LENGTH / 2 - 0.01]}>
-          <boxGeometry args={[0.3, 0.15, 0.02]} />
+          <boxGeometry args={[0.35, 0.15, 0.02]} />
           <meshStandardMaterial color="#c81e1e" emissive="#ff1a1a" emissiveIntensity={rearlight} />
         </mesh>
       ))}
