@@ -59,7 +59,7 @@ interface GameStore {
   setPathPointCount: (count: number) => void
   toggleContours: () => void
   toggleLookMode: () => void
-  toggleNight: () => void
+  setNight: (night: boolean) => void
   setSeason: (season: Season) => void
   setCameraDistance: (value: number) => void
   setCameraHeight: (value: number) => void
@@ -136,7 +136,7 @@ export const useGameStore = create<GameStore>()(
     toggleContours: () =>
       set((s) => ({ settings: { ...s.settings, showContours: !s.settings.showContours } })),
     setSeason: (season) => set((s) => ({ settings: { ...s.settings, season } })),
-    toggleNight: () => set((s) => ({ settings: { ...s.settings, night: !s.settings.night } })),
+    setNight: (night) => set((s) => ({ settings: { ...s.settings, night } })),
     toggleLookMode: () =>
       set((s) => ({ settings: { ...s.settings, lookMode: !s.settings.lookMode } })),
     setCameraDistance: (cameraDistance) =>

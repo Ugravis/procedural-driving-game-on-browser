@@ -36,7 +36,7 @@ export function SettingsPanel() {
   const seedDraft = useGameStore((s) => s.seedDraft)
   const toggleContours = useGameStore((s) => s.toggleContours)
   const toggleLookMode = useGameStore((s) => s.toggleLookMode)
-  const toggleNight = useGameStore((s) => s.toggleNight)
+  const setNight = useGameStore((s) => s.setNight)
   const setSeason = useGameStore((s) => s.setSeason)
   const setCameraDistance = useGameStore((s) => s.setCameraDistance)
   const setCameraHeight = useGameStore((s) => s.setCameraHeight)
@@ -62,13 +62,22 @@ export function SettingsPanel() {
       </label>
 
       <h3>Ambiance</h3>
-      <button
-        type="button"
-        className={`hud-button${settings.night ? ' is-active' : ''}`}
-        onClick={toggleNight}
-      >
-        Mode nuit
-      </button>
+      <div className="hud-presets">
+        <button
+          type="button"
+          className={`hud-button${settings.night ? '' : ' is-active'}`}
+          onClick={() => setNight(false)}
+        >
+          Jour
+        </button>
+        <button
+          type="button"
+          className={`hud-button${settings.night ? ' is-active' : ''}`}
+          onClick={() => setNight(true)}
+        >
+          Nuit
+        </button>
+      </div>
 
       <h3>Saison</h3>
       <div className="hud-presets">
