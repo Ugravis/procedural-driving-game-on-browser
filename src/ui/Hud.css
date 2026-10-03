@@ -130,8 +130,29 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
+.hud-minimap {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .hud-minimap canvas {
   display: block;
   width: 200px;
   height: 200px;
+}
+
+.hud-minimap.is-expanded {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  z-index: 10;
+}
+
+.hud-minimap.is-expanded canvas {
+  width: min(640px, 80vmin);
+  height: min(640px, 80vmin);
 }
