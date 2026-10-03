@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BIOMES, biomeWeights, dominantBiome, mapColour } from '../procgen/biomes'
+import { BIOMES, biomeWeights, dominantBiome, mapColour, seaWeight } from '../procgen/biomes'
 import { getLandscapeParams } from '../procgen/landscape'
 import { proceduralPath } from '../procgen/pathGenerator'
 import { heightAt } from '../procgen/terrain'
@@ -283,6 +283,8 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView, pan: Pan)
 
 function updateLabels(biome: HTMLSpanElement | null, altitude: HTMLSpanElement | null) {
   const [x, y, z] = useGameStore.getState().player.position
-  if (biome) biome.textContent = BIOMES[dominantBiome(biomeWeights(x, z))] ?? ''
+  if (biome)
+    biome.textContent =
+      seaWeight(x, z) > 0.5 ? 'mer' : (BIOMES[dominantBiome(biomeWeights(x, z))] ?? '')
   if (altitude) altitude.textContent = `altitude ${Math.round(y) || 0} m`
 }
