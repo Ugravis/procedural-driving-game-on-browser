@@ -36,6 +36,7 @@ export function SettingsPanel() {
   const seedDraft = useGameStore((s) => s.seedDraft)
   const toggleContours = useGameStore((s) => s.toggleContours)
   const toggleLookMode = useGameStore((s) => s.toggleLookMode)
+  const toggleNight = useGameStore((s) => s.toggleNight)
   const setSeason = useGameStore((s) => s.setSeason)
   const setCameraDistance = useGameStore((s) => s.setCameraDistance)
   const setCameraHeight = useGameStore((s) => s.setCameraHeight)
@@ -59,6 +60,15 @@ export function SettingsPanel() {
         <input type="checkbox" checked={settings.lookMode} onChange={toggleLookMode} />
         Ambiance ombrée (test)
       </label>
+
+      <h3>Ambiance</h3>
+      <button
+        type="button"
+        className={`hud-button${settings.night ? ' is-active' : ''}`}
+        onClick={toggleNight}
+      >
+        Mode nuit
+      </button>
 
       <h3>Saison</h3>
       <div className="hud-presets">
