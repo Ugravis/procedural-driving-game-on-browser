@@ -1,4 +1,5 @@
-import { groveFactor, vegetationFactor, biomeWeights } from './biomes'
+import { biomeWeights, groveFactor, vegetationFactor } from './biomes'
+import { hash } from './hash'
 import { ROAD_HALF_WIDTH, type ProceduralPath } from './pathGenerator'
 import { isUnderWater } from './water'
 import { heightAt } from './terrain'
@@ -17,13 +18,6 @@ const SLOPE_PROBE = 1.5 // m, écart pour mesurer la pente locale
 export interface VegetationInstance {
   position: [number, number, number]
   scale: number
-}
-
-// Hash déterministe (pas de Math.random) : un chunk redonne toujours la même
-// végétation quand il est rechargé après avoir été déchargé.
-function hash(x: number, z: number): number {
-  const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453123
-  return s - Math.floor(s)
 }
 
 function smoothstep(edge0: number, edge1: number, value: number): number {
