@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BIOMES, biomeWeights, dominantBiome, mapColour } from '../procgen/biomes'
 import { getLandscapeParams } from '../procgen/landscape'
 import { proceduralPath } from '../procgen/pathGenerator'
@@ -12,7 +12,10 @@ interface MapView {
 }
 
 const COMPACT: MapView = { size: 200, range: 300, cell: 10 }
-const EXPANDED: MapView = { size: 640, range: 1000, cell: 20 }
+const EXPANDED_SIZE = 640
+const ZOOM_RANGES = [250, 500, 1000, 2000, 4000] // m, demi-côté de la carte agrandie selon le zoom
+const DEFAULT_ZOOM = 2
+const CELLS_ACROSS = 50 // nombre de cellules de relief sur la largeur de la carte agrandie
 const CONTOUR_INTERVAL = 10 // m, écart entre courbes de niveau
 const REFRESH_MS = 250
 const DEG_TO_RAD = Math.PI / 180
@@ -44,7 +47,12 @@ export function Minimap() {
     startY: number
     moved: boolean
   } | null>(null)
-  const view = expanded ? EXPANDED : COMPACT
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const range = ZOOM_RANGES[zoom]!
+  const view = useMemo<MapView>(
+    () => (expanded ? { size: EXPANDED_SIZE, range, cell: (2 * range) / CELLS_ACROSS } : COMPACT),
+    [expanded, range],
+  )
 
   useEffect(() => {
     const context = canvasRef.current?.getContext('2d')
@@ -76,6 +84,7 @@ export function Minimap() {
 
   const open = () => {
     pan.current = { x: 0, z: 0 }
+    setZoom(DEFAULT_ZOOM)
     setExpanded(true)
   }
 
@@ -108,7 +117,7 @@ export function Minimap() {
           const current = drag.current
           if (!current) return
           const metresPerPixel =
-            (2 * EXPANDED.range) / event.currentTarget.getBoundingClientRect().width
+            (2 * view.range) / event.currentTarget.getBoundingClientRect().width
           const dx = event.clientX - current.x
           const dy = event.clientY - current.y
           pan.current = {
@@ -136,6 +145,26 @@ export function Minimap() {
               }}
             >
               Recentrer
+            </button>
+            <button
+              type="button"
+              aria-label="Zoomer"
+              onClick={(event) => {
+                event.stopPropagation()
+                setZoom((value) => Math.max(0, value - 1))
+              }}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              aria-label="Dézoomer"
+              onClick={(event) => {
+                event.stopPropagation()
+                setZoom((value) => Math.min(ZOOM_RANGES.length - 1, value + 1))
+              }}
+            >
+              −
             </button>
             <button
               type="button"
@@ -211,7 +240,7 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView, pan: Pan)
     }
   }
 
-  const lineWidth = view === EXPANDED ? 3 : 2
+  const lineWidth = view.size > COMPACT.size ? 3 : 2
   context.lineWidth = lineWidth
   context.lineCap = 'round'
   context.strokeStyle = ROAD
