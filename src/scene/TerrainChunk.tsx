@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { buildContourGeometry } from '../procgen/contours'
 import { proceduralPath } from '../procgen/pathGenerator'
+import { buildRoadSurface } from '../procgen/roadSurface'
 import { buildChunkGeometry, CHUNK_RESOLUTION, CHUNK_SIZE } from '../procgen/terrain'
 import { useGameStore } from '../state/gameStore'
 
@@ -17,6 +18,10 @@ export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
     () => buildChunkGeometry(chunkX, chunkZ, proceduralPath),
     [chunkX, chunkZ],
   )
+  const roadGeometry = useMemo(
+    () => buildRoadSurface(chunkX, chunkZ, proceduralPath),
+    [chunkX, chunkZ],
+  )
   const contours = useMemo(
     () =>
       showContours ? buildContourGeometry(geometry, CHUNK_RESOLUTION + 1, CONTOUR_INTERVAL) : null,
@@ -24,6 +29,7 @@ export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
   )
 
   useEffect(() => () => geometry.dispose(), [geometry])
+  useEffect(() => () => roadGeometry.dispose(), [roadGeometry])
   useEffect(() => () => contours?.dispose(), [contours])
 
   const position: [number, number, number] = [chunkX * CHUNK_SIZE, 0, chunkZ * CHUNK_SIZE]
@@ -32,6 +38,9 @@ export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
     <group position={position}>
       <mesh geometry={geometry}>
         <meshStandardMaterial color="#4a6b4a" />
+      </mesh>
+      <mesh geometry={roadGeometry}>
+        <meshStandardMaterial color="#3a3f44" polygonOffset polygonOffsetFactor={-2} />
       </mesh>
       {contours && (
         <lineSegments geometry={contours}>
