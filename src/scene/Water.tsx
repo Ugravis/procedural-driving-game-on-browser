@@ -1,10 +1,10 @@
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import type { Mesh } from 'three'
-import { CHUNK_SIZE, RENDER_RADIUS_CHUNKS } from '../procgen/terrain'
+import { CHUNK_SIZE } from '../procgen/terrain'
 import { useGameStore } from '../state/gameStore'
 
-const EXTENT = (2 * RENDER_RADIUS_CHUNKS + 1) * CHUNK_SIZE
+const EXTENT = 2400 // m, couvre la carte agrandie et le brouillard
 
 // Plan d'eau unique : le niveau est global, donc une seule surface plane suffit.
 // Elle suit le joueur par pas de chunk, et le relief qui dépasse la masque.
