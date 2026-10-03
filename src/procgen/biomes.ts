@@ -4,7 +4,16 @@ import { createRandom } from './random'
 export const BIOMES = ['vallée', 'plaine', 'colline', 'montagne'] as const
 export type Biome = (typeof BIOMES)[number]
 
-const BIOME_FREQUENCY = 1 / 4000 // 1/m, les biomes font quelques km
+// Trois échelles de bruit (grandes régions, régions moyennes, détails) et une
+// déformation des coordonnées : les régions ne sont plus toutes de la même taille.
+const SCALES = [
+  { frequency: 1 / 9000, weight: 0.6 },
+  { frequency: 1 / 3000, weight: 0.3 },
+  { frequency: 1 / 1500, weight: 0.1 },
+]
+const SCALE_STD = Math.sqrt(SCALES.reduce((sum, scale) => sum + scale.weight ** 2, 0)) // restaure la variance du bruit
+const WARP_FREQUENCY = 1 / 6000 // 1/m
+const WARP_AMPLITUDE = 1500 // m
 const BIOME_SALT = 4
 const CENTRES = [-0.6, -0.2, 0.2, 0.6] // valeur du bruit de biome au centre de chaque biome
 const SPREAD = 0.25 // largeur des transitions entre biomes
@@ -27,16 +36,26 @@ const MAP_COLOUR = [
   [122, 116, 104],
 ]
 
-let biomeNoise: NoiseFunction2D = createNoise2D(createRandom(BIOME_SALT))
+let scaleNoises: NoiseFunction2D[] = SCALES.map((_, i) =>
+  createNoise2D(createRandom(BIOME_SALT + i)),
+)
+let warpNoise: NoiseFunction2D = createNoise2D(createRandom(BIOME_SALT + 10))
 
 export function setBiomeSeed(seed: number) {
-  biomeNoise = createNoise2D(createRandom(seed + BIOME_SALT))
+  scaleNoises = SCALES.map((_, i) => createNoise2D(createRandom(seed + BIOME_SALT + i)))
+  warpNoise = createNoise2D(createRandom(seed + BIOME_SALT + 10))
 }
 
 // Poids de chaque biome en (x, z), somme égale à 1. Continu, donc les transitions
 // sont douces (relief, couleur, végétation s'y mélangent).
 export function biomeWeights(x: number, z: number): number[] {
-  const value = biomeNoise(x * BIOME_FREQUENCY, z * BIOME_FREQUENCY)
+  const warpX = x + warpNoise(x * WARP_FREQUENCY, z * WARP_FREQUENCY) * WARP_AMPLITUDE
+  const warpZ = z + warpNoise(z * WARP_FREQUENCY + 17, x * WARP_FREQUENCY) * WARP_AMPLITUDE
+  let value = 0
+  SCALES.forEach((scale, i) => {
+    value += scale.weight * scaleNoises[i]!(warpX * scale.frequency, warpZ * scale.frequency)
+  })
+  value /= SCALE_STD
   const raw = CENTRES.map((centre) => Math.exp(-(((value - centre) / SPREAD) ** 2)))
   const total = raw.reduce((sum, weight) => sum + weight, 0)
   return raw.map((weight) => weight / total)
