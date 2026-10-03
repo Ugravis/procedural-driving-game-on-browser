@@ -15,15 +15,15 @@ const CHASSIS_BOTTOM = 0.2 // m, le châssis chevauche le haut des roues
 const CHASSIS_HEIGHT = 0.5 // m
 const CHASSIS_Y = CHASSIS_BOTTOM + CHASSIS_HEIGHT / 2
 const CHASSIS_TOP = CHASSIS_BOTTOM + CHASSIS_HEIGHT
-const CAB_LENGTH = 1.8 // m, cabine à l'avant
+const CAB_LENGTH = 1.5 // m, cabine courte à l'avant
 const CAB_WIDTH = 1.7 // m
-const CAB_HEIGHT = 0.6 // m
-const CAB_Z = 1.2 // m, centre de la cabine
+const CAB_HEIGHT = 0.5 // m
+const CAB_Z = 1.35 // m, centre de la cabine, au-dessus de l'essieu avant
 const CAB_Y = CHASSIS_TOP + CAB_HEIGHT / 2
-const BED_LENGTH = 1.9 // m, plateau arrière ouvert
-const BED_Z = -1.1 // m, centre du plateau
+const BED_LENGTH = 2.6 // m, plateau arrière long et ouvert
+const BED_Z = -0.8 // m, centre du plateau
 const BED_FLOOR_Y = CHASSIS_TOP + 0.04
-const BED_WALL_HEIGHT = 0.4 // m
+const BED_WALL_HEIGHT = 0.3 // m
 const BED_WALL_THICKNESS = 0.06 // m
 const LIGHT_Y = CHASSIS_Y // m, hauteur des feux
 const VEHICLE_LIFT = WHEEL_RADIUS // m, origine au centre des roues, au-dessus du sol
@@ -178,8 +178,8 @@ export function Vehicle() {
         <boxGeometry args={[CAB_WIDTH, CAB_HEIGHT, CAB_LENGTH]} />
         <meshStandardMaterial color="orange" />
       </mesh>
-      <mesh position={[0, CAB_Y, CAB_Z + CAB_LENGTH / 2 + 0.005]}>
-        <boxGeometry args={[CAB_WIDTH - 0.2, CAB_HEIGHT - 0.2, 0.01]} />
+      <mesh position={[0, CAB_Y + 0.05, CAB_Z + CAB_LENGTH / 2 - 0.1]} rotation={[-0.45, 0, 0]}>
+        <boxGeometry args={[CAB_WIDTH - 0.2, CAB_HEIGHT * 0.8, 0.02]} />
         <meshStandardMaterial color="#2b3a42" />
       </mesh>
       <mesh position={[0, BED_FLOOR_Y, BED_Z]} castShadow>
@@ -201,7 +201,9 @@ export function Vehicle() {
         </mesh>
       ))}
       <mesh castShadow position={[0, BED_FLOOR_Y + BED_WALL_HEIGHT / 2, BED_Z - BED_LENGTH / 2]}>
-        <boxGeometry args={[CAR_WIDTH, BED_WALL_HEIGHT, BED_WALL_THICKNESS]} />
+        <boxGeometry
+          args={[CAR_WIDTH - 2 * BED_WALL_THICKNESS, BED_WALL_HEIGHT, BED_WALL_THICKNESS]}
+        />
         <meshStandardMaterial color="orange" />
       </mesh>
       {WHEEL_POSITIONS.map(([x, z], i) => (
