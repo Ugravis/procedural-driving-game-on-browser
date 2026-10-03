@@ -24,6 +24,7 @@ export interface DebugState {
 export interface SettingsState {
   showContours: boolean
   drivingReverse: boolean
+  lookMode: boolean // ambiance ombrée : soleil, ombres, rendu facetté
   cameraDistance: number // m, recul de la caméra derrière le véhicule
   cameraHeight: number // m, hauteur de la caméra
   cameraYaw: number // degrés, rotation de la caméra autour du véhicule
@@ -49,6 +50,7 @@ interface GameStore {
   setPathPointCount: (count: number) => void
   toggleContours: () => void
   toggleDrivingReverse: () => void
+  toggleLookMode: () => void
   setCameraDistance: (value: number) => void
   setCameraHeight: (value: number) => void
   setCameraYaw: (value: number) => void
@@ -88,6 +90,7 @@ export const useGameStore = create<GameStore>()(
     settings: {
       showContours: false,
       drivingReverse: false,
+      lookMode: false,
       cameraDistance: 11,
       cameraHeight: 4,
       cameraYaw: 0,
@@ -103,6 +106,8 @@ export const useGameStore = create<GameStore>()(
     setPathPointCount: (pathPointCount) => set((s) => ({ debug: { ...s.debug, pathPointCount } })),
     toggleContours: () =>
       set((s) => ({ settings: { ...s.settings, showContours: !s.settings.showContours } })),
+    toggleLookMode: () =>
+      set((s) => ({ settings: { ...s.settings, lookMode: !s.settings.lookMode } })),
     toggleDrivingReverse: () =>
       set((s) => ({ settings: { ...s.settings, drivingReverse: !s.settings.drivingReverse } })),
     setCameraDistance: (cameraDistance) =>

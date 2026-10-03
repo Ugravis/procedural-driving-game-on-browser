@@ -14,6 +14,7 @@ interface TerrainChunkProps {
 
 export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
   const showContours = useGameStore((s) => s.settings.showContours)
+  const lookMode = useGameStore((s) => s.settings.lookMode)
   const geometry = useMemo(
     () => buildChunkGeometry(chunkX, chunkZ, proceduralPath),
     [chunkX, chunkZ],
@@ -36,10 +37,14 @@ export function TerrainChunk({ chunkX, chunkZ }: TerrainChunkProps) {
 
   return (
     <group position={position}>
-      <mesh geometry={geometry}>
-        <meshStandardMaterial color="#4a6b4a" />
+      <mesh geometry={geometry} receiveShadow>
+        <meshStandardMaterial
+          key={lookMode ? 'look' : 'plain'}
+          color={lookMode ? '#7fbf5a' : '#4a6b4a'}
+          flatShading={lookMode}
+        />
       </mesh>
-      <mesh geometry={roadGeometry}>
+      <mesh geometry={roadGeometry} receiveShadow>
         <meshStandardMaterial color="#3a3f44" polygonOffset polygonOffsetFactor={-2} />
       </mesh>
       {contours && (

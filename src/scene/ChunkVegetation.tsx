@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Object3D, type InstancedMesh } from 'three'
 import { proceduralPath } from '../procgen/pathGenerator'
 import { CHUNK_SIZE } from '../procgen/terrain'
+import { useGameStore } from '../state/gameStore'
 import { scatterVegetation } from '../procgen/vegetation'
 
 const dummy = new Object3D()
@@ -15,6 +16,7 @@ interface ChunkVegetationProps {
 // arbre) : un draw call rend des dizaines d'instances.
 export function ChunkVegetation({ chunkX, chunkZ }: ChunkVegetationProps) {
   const meshRef = useRef<InstancedMesh>(null)
+  const lookMode = useGameStore((s) => s.settings.lookMode)
   const instances = useMemo(
     () => scatterVegetation(chunkX, chunkZ, CHUNK_SIZE, proceduralPath),
     [chunkX, chunkZ],
@@ -36,9 +38,18 @@ export function ChunkVegetation({ chunkX, chunkZ }: ChunkVegetationProps) {
   if (instances.length === 0) return null
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, instances.length]}>
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, instances.length]}
+      castShadow
+      receiveShadow
+    >
       <coneGeometry args={[1, 3, 6]} />
-      <meshStandardMaterial color="#2f5233" />
+      <meshStandardMaterial
+        key={lookMode ? 'look' : 'plain'}
+        color={lookMode ? '#2e8b3e' : '#2f5233'}
+        flatShading={lookMode}
+      />
     </instancedMesh>
   )
 }

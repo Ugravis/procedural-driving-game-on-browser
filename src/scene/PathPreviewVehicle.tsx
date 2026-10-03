@@ -82,7 +82,7 @@ export function PathPreviewVehicle() {
   })
 
   return (
-    <mesh ref={meshRef}>
+    <mesh ref={meshRef} castShadow>
       <boxGeometry args={[1, 1, 2]} />
       <meshStandardMaterial color="orange" />
     </mesh>
