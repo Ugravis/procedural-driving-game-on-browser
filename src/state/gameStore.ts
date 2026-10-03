@@ -27,6 +27,7 @@ export interface SettingsState {
   drivingReverse: boolean
   cameraDistance: number // m, recul de la caméra derrière le véhicule
   cameraHeight: number // m, hauteur de la caméra
+  cameraYaw: number // degrés, rotation de la caméra autour du véhicule
 }
 
 interface GameStore {
@@ -52,6 +53,7 @@ interface GameStore {
   toggleDrivingReverse: () => void
   setCameraDistance: (value: number) => void
   setCameraHeight: (value: number) => void
+  setCameraYaw: (value: number) => void
   setSeedDraft: (seed: number) => void
   setLandscapeDraft: (partial: Partial<LandscapeParams>) => void
   regenerate: () => void
@@ -91,6 +93,7 @@ export const useGameStore = create<GameStore>()(
       drivingReverse: false,
       cameraDistance: 11,
       cameraHeight: 4,
+      cameraYaw: 0,
     },
     seed: initialSeed,
     seedDraft: initialSeed,
@@ -110,6 +113,7 @@ export const useGameStore = create<GameStore>()(
     setCameraDistance: (cameraDistance) =>
       set((s) => ({ settings: { ...s.settings, cameraDistance } })),
     setCameraHeight: (cameraHeight) => set((s) => ({ settings: { ...s.settings, cameraHeight } })),
+    setCameraYaw: (cameraYaw) => set((s) => ({ settings: { ...s.settings, cameraYaw } })),
     setSeedDraft: (seedDraft) => set({ seedDraft }),
     setLandscapeDraft: (partial) =>
       set((s) => ({ landscapeDraft: { ...s.landscapeDraft, ...partial } })),
