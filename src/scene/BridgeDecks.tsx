@@ -4,40 +4,36 @@ import { BufferGeometry, DoubleSide, Float32BufferAttribute, type Mesh } from 't
 import { proceduralPath, ROAD_HALF_WIDTH } from '../procgen/pathGenerator'
 
 const DECK_OFFSET = 0.05 // m, léger décalage du tablier pour éviter le z-fighting avec le sol
-const SAMPLES_PER_SEGMENT = 2
 const BRIDGE_COLOR = '#ff2bd6' // couleur très voyante, pour repérer les ponts pendant les tests
 
-// Seuls les tabliers sont des maillages : le reste de la route est peint dans
-// le terrain. Chaque échantillon a deux sommets écartés de la demi-largeur de la
-// route, perpendiculairement à la tangente en plan.
+// Seuls les tabliers sont des maillages : le reste de la route est posé sur le
+// terrain (roadSurface.ts). Chaque segment de tablier est un quad à hauteur réelle.
 function buildDecks(): BufferGeometry {
-  const curve = proceduralPath.getCurve()
-  const points = proceduralPath.getWindow()
-  const total = (points.length - 1) * SAMPLES_PER_SEGMENT
-
   const positions: number[] = []
   const indices: number[] = []
 
-  for (let q = 0; q <= total; q++) {
-    const t = q / total
-    const p = curve.getPoint(t)
-    const tangent = curve.getTangent(t)
-    const planLength = Math.hypot(tangent.x, tangent.z) || 1
-    const rightX = -tangent.z / planLength
-    const rightZ = tangent.x / planLength
-    const y = p.y + DECK_OFFSET
+  for (const { a, b } of proceduralPath.bridgeSegments()) {
+    const dx = b.x - a.x
+    const dz = b.z - a.z
+    const length = Math.hypot(dx, dz) || 1
+    const rx = (-dz / length) * ROAD_HALF_WIDTH
+    const rz = (dx / length) * ROAD_HALF_WIDTH
+    const base = positions.length / 3
     positions.push(
-      p.x - rightX * ROAD_HALF_WIDTH,
-      y,
-      p.z - rightZ * ROAD_HALF_WIDTH,
-      p.x + rightX * ROAD_HALF_WIDTH,
-      y,
-      p.z + rightZ * ROAD_HALF_WIDTH,
+      a.x - rx,
+      a.y + DECK_OFFSET,
+      a.z - rz,
+      a.x + rx,
+      a.y + DECK_OFFSET,
+      a.z + rz,
+      b.x - rx,
+      b.y + DECK_OFFSET,
+      b.z - rz,
+      b.x + rx,
+      b.y + DECK_OFFSET,
+      b.z + rz,
     )
-    if (q < total && points[Math.floor(q / SAMPLES_PER_SEGMENT) + 1]!.bridge) {
-      const a = q * 2
-      indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
-    }
+    indices.push(base, base + 1, base + 2, base + 1, base + 3, base + 2)
   }
 
   const geometry = new BufferGeometry()
