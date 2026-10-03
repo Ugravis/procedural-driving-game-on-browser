@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
-import { Vector3, type Mesh } from 'three'
+import { Vector3, type Group } from 'three'
 import { proceduralPath, ROAD_HALF_WIDTH } from '../procgen/pathGenerator'
 import { heightAt } from '../procgen/terrain'
 import { useGameStore } from '../state/gameStore'
@@ -13,6 +13,12 @@ const FULL_STEER_SPEED = 5 // m/s, en dessous le braquage est réduit
 const ON_ROAD_DISTANCE = 30 // m, au-delà on considère qu'on a quitté la route
 const GRADE_SAMPLE = 2 // m, distance d'échantillonnage de la pente devant
 const RAD_TO_DEG = 180 / Math.PI
+const WHEEL_POSITIONS: [number, number][] = [
+  [0.5, 0.7],
+  [-0.5, 0.7],
+  [0.5, -0.7],
+  [-0.5, -0.7],
+]
 const MS_TO_KMH = 3.6
 
 // Véhicule en conduite libre : position et cap, la hauteur vient du terrain.
@@ -20,7 +26,7 @@ const MS_TO_KMH = 3.6
 // la portion de route la plus proche, donc la route suit le joueur même s'il s'en écarte.
 export function Vehicle() {
   const { camera } = useThree()
-  const meshRef = useRef<Mesh>(null)
+  const meshRef = useRef<Group>(null)
   const pose = useRef({ x: 0, z: 0, heading: 0, speed: 0, odometer: 0, horizon: 0 })
   const placeAtStart = () => {
     const spawn = proceduralPath.findSpawn()
@@ -125,9 +131,29 @@ export function Vehicle() {
   })
 
   return (
-    <mesh ref={meshRef} castShadow>
-      <boxGeometry args={[1, 1, 2]} />
-      <meshStandardMaterial color="orange" />
-    </mesh>
+    <group ref={meshRef}>
+      <mesh castShadow position={[0, 0, 0]}>
+        <boxGeometry args={[1, 0.45, 2.2]} />
+        <meshStandardMaterial color="orange" />
+      </mesh>
+      <mesh castShadow position={[0, 0.42, -0.2]}>
+        <boxGeometry args={[0.9, 0.4, 1.1]} />
+        <meshStandardMaterial color="#2b3a42" />
+      </mesh>
+      {WHEEL_POSITIONS.map(([x, z], i) => (
+        <mesh key={i} castShadow position={[x, -0.2, z]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.3, 0.3, 0.22, 12]} />
+          <meshStandardMaterial color="#1e1e1e" />
+        </mesh>
+      ))}
+      <mesh position={[0.35, 0.05, 1.11]}>
+        <boxGeometry args={[0.2, 0.12, 0.02]} />
+        <meshStandardMaterial color="#fff6c8" emissive="#fff6c8" emissiveIntensity={0.6} />
+      </mesh>
+      <mesh position={[-0.35, 0.05, 1.11]}>
+        <boxGeometry args={[0.2, 0.12, 0.02]} />
+        <meshStandardMaterial color="#fff6c8" emissive="#fff6c8" emissiveIntensity={0.6} />
+      </mesh>
+    </group>
   )
 }
