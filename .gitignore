@@ -21,3 +21,6 @@ npm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Notes locales (plans, brouillons), non versionnées
+notes/
