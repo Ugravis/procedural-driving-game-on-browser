@@ -23,7 +23,7 @@ const MS_TO_KMH = 3.6
 const HEADLIGHT_OFF = 0.1
 const HEADLIGHT_ON = 1.5
 const BEAM_INTENSITY = 60 // candela, faisceau des projecteurs allumés
-const BEAM_REACH = 40 // m
+const BEAM_REACH = 80 // m
 const BEAM_X = [0.35, -0.35]
 const REARLIGHT_OFF = 0.2
 const REARLIGHT_ON = 2
@@ -174,7 +174,7 @@ export function Vehicle() {
             angle={0.45}
             penumbra={0.5}
             distance={BEAM_REACH}
-            decay={2}
+            decay={1.5}
             color="#fff3d0"
           />
           <primitive object={beamTargets[i]!} position={[x, 0, BEAM_REACH / 2]} />
