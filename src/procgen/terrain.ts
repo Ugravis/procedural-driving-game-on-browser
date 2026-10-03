@@ -12,13 +12,15 @@ const TRANSITION_WIDTH = 3 // m, raccord doux (talus) entre la bande plate et le
 /**
  * Terrain autour de la route : aplani à son altitude sur la route et son
  * accotement, puis un talus progressif vers le relief naturel. Sur une pente,
- * le talus est en déblai côté amont et en remblai côté aval.
+ * le talus est en déblai côté amont et en remblai côté aval. Sous un tablier,
+ * le relief naturel est conservé.
  */
 export function heightAt(x: number, z: number, path: ProceduralPath): number {
   const road = path.roadAt(x, z)
+  const natural = landscapeHeight(x, z)
+  if (road.bridge) return natural
   const flatRadius = ROAD_HALF_WIDTH + SHOULDER_WIDTH
   if (road.distance <= flatRadius) return road.height
-  const natural = landscapeHeight(x, z)
   if (road.distance >= flatRadius + TRANSITION_WIDTH) return natural
   const t = (road.distance - flatRadius) / TRANSITION_WIDTH
   const smooth = t * t * (3 - 2 * t)
