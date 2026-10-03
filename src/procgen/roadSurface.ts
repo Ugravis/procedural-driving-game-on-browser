@@ -25,9 +25,13 @@ export function buildRoadSurface(
 
   const positions: number[] = []
   const indices: number[] = []
+  const across: number[] = []
+  const along: number[] = []
 
-  const vertex = (x: number, z: number) => {
+  const vertex = (x: number, z: number, side: number, alongRoad: number) => {
     positions.push(x - originX, heightAt(x, z, path) + SURFACE_OFFSET, z - originZ)
+    across.push(side)
+    along.push(alongRoad)
   }
 
   for (let i = 0; i < points.length - 1; i++) {
@@ -41,18 +45,24 @@ export function buildRoadSurface(
     const length = Math.hypot(dx, dz) || 1
     const rx = (-dz / length) * ROAD_HALF_WIDTH
     const rz = (dx / length) * ROAD_HALF_WIDTH
+    const ux = dx / length
+    const uz = dz / length
+    const alongA = a.x * ux + a.z * uz
+    const alongB = b.x * ux + b.z * uz
 
     const base = positions.length / 3
-    vertex(a.x - rx, a.z - rz)
-    vertex(a.x + rx, a.z + rz)
-    vertex(b.x - rx, b.z - rz)
-    vertex(b.x + rx, b.z + rz)
+    vertex(a.x - rx, a.z - rz, -1, alongA)
+    vertex(a.x + rx, a.z + rz, 1, alongA)
+    vertex(b.x - rx, b.z - rz, -1, alongB)
+    vertex(b.x + rx, b.z + rz, 1, alongB)
     indices.push(base, base + 1, base + 2, base + 1, base + 3, base + 2)
   }
 
   const geometry = new BufferGeometry()
   geometry.setIndex(indices)
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('across', new Float32BufferAttribute(across, 1))
+  geometry.setAttribute('along', new Float32BufferAttribute(along, 1))
   geometry.computeVertexNormals()
   return geometry
 }

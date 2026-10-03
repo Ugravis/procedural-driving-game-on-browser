@@ -34,6 +34,7 @@ export function SettingsPanel() {
   const seedDraft = useGameStore((s) => s.seedDraft)
   const toggleContours = useGameStore((s) => s.toggleContours)
   const toggleDrivingReverse = useGameStore((s) => s.toggleDrivingReverse)
+  const toggleRoadShader = useGameStore((s) => s.toggleRoadShader)
   const setCameraDistance = useGameStore((s) => s.setCameraDistance)
   const setCameraHeight = useGameStore((s) => s.setCameraHeight)
   const setCameraYaw = useGameStore((s) => s.setCameraYaw)
@@ -54,6 +55,11 @@ export function SettingsPanel() {
       <label className="hud-check">
         <input type="checkbox" checked={settings.drivingReverse} onChange={toggleDrivingReverse} />
         Rouler en arrière
+      </label>
+
+      <label className="hud-check">
+        <input type="checkbox" checked={settings.roadShader} onChange={toggleRoadShader} />
+        Shader de route (test)
       </label>
 
       <Slider
