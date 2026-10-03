@@ -20,8 +20,13 @@ export function nextSpeed(
   dt: number,
   handbrake = false,
 ): number {
+  if (handbrake) {
+    const step = HANDBRAKE_DECELERATION * dt
+    if (Math.abs(speed) <= step) return 0
+    return speed - Math.sign(speed) * step
+  }
+
   let acceleration = -GRAVITY * grade - AERO_DRAG * speed * Math.abs(speed)
-  if (handbrake && speed !== 0) acceleration -= Math.sign(speed) * HANDBRAKE_DECELERATION
 
   if (throttle > 0) {
     const headroom = Math.max(0, 1 - Math.max(speed, 0) / MAX_SPEED)

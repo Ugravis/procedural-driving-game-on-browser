@@ -74,13 +74,13 @@ export function Vehicle() {
     )
     const grade = (ahead - here) / GRADE_SAMPLE
 
-    const handbrake = controls.handbrake()
+    if (controls.consumeLightsToggle()) state.toggleLights()
+    if (controls.consumeHandbrakeToggle()) state.toggleHandbrake()
+    const { handbrake } = useGameStore.getState()
     const throttle = handbrake ? 0 : controls.throttle()
     p.speed = nextSpeed(p.speed, throttle, grade, delta, handbrake)
-    if (controls.consumeLightsToggle()) state.toggleLights()
-    if (state.handbrake !== handbrake || state.braking !== (handbrake || throttle < 0)) {
-      state.setDriveState(handbrake, handbrake || throttle < 0)
-    }
+    const braking = handbrake || throttle < 0
+    if (useGameStore.getState().braking !== braking) state.setBraking(braking)
     if (Math.abs(p.speed) > 0.01) {
       const turnAuthority = Math.min(Math.abs(p.speed) / FULL_STEER_SPEED, 1)
       p.heading += controls.steer() * TURN_RATE * turnAuthority * Math.sign(p.speed) * delta
