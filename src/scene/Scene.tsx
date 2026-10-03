@@ -8,7 +8,7 @@ export function Scene() {
   return (
     <>
       <Sky sunPosition={[10, 10, 5]} />
-      <fog attach="fog" args={['#cfe8e0', 20, 140]} />
+      <fog attach="fog" args={['#cfe8e0', 60, 240]} />
       <Lights />
       <Terrain />
       <RoadPath />

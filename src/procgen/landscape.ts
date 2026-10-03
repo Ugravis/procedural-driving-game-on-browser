@@ -1,23 +1,43 @@
 import { createNoise2D } from 'simplex-noise'
 
-const HEIGHT_SCALE = 40 // m, amplitude du relief
-const FREQUENCY = 0.001 // collines de l'ordre du kilomètre
-const OCTAVES = 2
-const PERSISTENCE = 0.4
+export interface LandscapeParams {
+  heightScale: number // m, amplitude du relief
+  frequency: number // 1/m, fréquence de base
+  octaves: number
+  persistence: number
+}
 
-const noise2D = createNoise2D()
+export const LANDSCAPE_PRESETS: Record<'Plaine' | 'Colline' | 'Montagne', LandscapeParams> = {
+  Plaine: { heightScale: 12, frequency: 0.0015, octaves: 2, persistence: 0.4 },
+  Colline: { heightScale: 40, frequency: 0.001, octaves: 2, persistence: 0.4 },
+  Montagne: { heightScale: 120, frequency: 0.0008, octaves: 4, persistence: 0.45 },
+}
+
+export const DEFAULT_LANDSCAPE: LandscapeParams = { ...LANDSCAPE_PRESETS.Montagne }
+
+let params: LandscapeParams = { ...DEFAULT_LANDSCAPE }
+let noise2D = createNoise2D()
+
+export function setLandscapeParams(next: LandscapeParams) {
+  params = { ...next }
+}
+
+// Nouveau bruit aléatoire : le relief change, la graine n'étant pas fixée.
+export function reseedLandscape() {
+  noise2D = createNoise2D()
+}
 
 // Source unique de vérité pour le relief : le terrain et la route en dérivent.
 export function landscapeHeight(x: number, z: number): number {
   let height = 0
   let amplitude = 1
-  let frequency = FREQUENCY
+  let frequency = params.frequency
   let norm = 0
-  for (let octave = 0; octave < OCTAVES; octave++) {
+  for (let octave = 0; octave < params.octaves; octave++) {
     height += noise2D(x * frequency, z * frequency) * amplitude
     norm += amplitude
-    amplitude *= PERSISTENCE
+    amplitude *= params.persistence
     frequency *= 2
   }
-  return (height / norm) * HEIGHT_SCALE
+  return (height / norm) * params.heightScale
 }

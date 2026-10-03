@@ -48,16 +48,31 @@ function angleDifference(a: number, b: number): number {
 // altitude exacte, garde une direction générale qui varie lentement, et
 // évite de recroiser un de ses anciens points.
 export class ProceduralPath {
-  private readonly wander2D = createNoise2D()
-  private readonly direction2D = createNoise2D()
-  private points: PathPoint[]
-  private readonly history: Vector3[] = []
-  private readonly grid = new Map<string, number[]>()
+  private wander2D = createNoise2D()
+  private direction2D = createNoise2D()
+  private points: PathPoint[] = []
+  private history: Vector3[] = []
+  private grid = new Map<string, number[]>()
   private heading = 0
-  private curve: CatmullRomCurve3
+  private curve = new CatmullRomCurve3()
   revision = 0
 
   constructor() {
+    this.init()
+  }
+
+  /** Repart de l'origine avec de nouveaux bruits (après régénération du relief). */
+  reset() {
+    this.wander2D = createNoise2D()
+    this.direction2D = createNoise2D()
+    this.init()
+    this.revision++
+  }
+
+  private init() {
+    this.history = []
+    this.grid = new Map()
+    this.heading = 0
     const origin = new Vector3(0, landscapeHeight(0, 0), 0)
     this.points = [{ position: origin, distance: 0 }]
     this.record(origin)
