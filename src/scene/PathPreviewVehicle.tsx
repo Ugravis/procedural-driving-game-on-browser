@@ -25,10 +25,12 @@ export function PathPreviewVehicle() {
       distanceRef.current = 0
     }
 
-    distanceRef.current += (SPEED_KMH / 3.6) * delta
+    const direction = state.settings.drivingReverse ? -1 : 1
+    distanceRef.current += direction * (SPEED_KMH / 3.6) * delta
 
     proceduralPath.update(distanceRef.current)
-    const { position, tangent } = proceduralPath.getPointAt(distanceRef.current)
+    const { position, tangent: pathTangent } = proceduralPath.getPointAt(distanceRef.current)
+    const tangent = pathTangent.clone().multiplyScalar(direction)
     const planLength = Math.hypot(tangent.x, tangent.z) || 1
     const forwardX = tangent.x / planLength
     const forwardZ = tangent.z / planLength

@@ -4,6 +4,7 @@ import { useGameStore } from '../state/gameStore'
 const REFRESH_MS = 250
 
 interface Readout {
+  seed: number
   speed: number
   altitude: number
   grade: number
@@ -16,8 +17,9 @@ interface Readout {
 }
 
 function snapshot(): Readout {
-  const { player, debug } = useGameStore.getState()
+  const { player, debug, seed } = useGameStore.getState()
   return {
+    seed,
     speed: player.speed,
     altitude: player.position[1],
     grade: player.grade,
@@ -41,6 +43,7 @@ export function EnvironmentPanel() {
   }, [])
 
   const rows: [string, string][] = [
+    ['Graine', String(data.seed)],
     ['Vitesse', `${data.speed.toFixed(0)} km/h`],
     ['Altitude', `${data.altitude.toFixed(1)} m`],
     ['Pente', `${data.grade.toFixed(1)} %`],

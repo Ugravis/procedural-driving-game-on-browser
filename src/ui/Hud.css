@@ -123,3 +123,13 @@
 .hud-presets .hud-button {
   margin-top: 0;
 }
+
+.hud-seed {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px;
+}
+
+.hud-seed .hud-button {
+  margin-top: 0;
+}

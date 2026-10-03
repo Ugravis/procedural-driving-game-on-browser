@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import {
   DEFAULT_LANDSCAPE,
-  reseedLandscape,
   setLandscapeParams,
+  setLandscapeSeed,
   type LandscapeParams,
 } from '../procgen/landscape'
 import { proceduralPath } from '../procgen/pathGenerator'
@@ -11,8 +11,8 @@ import { proceduralPath } from '../procgen/pathGenerator'
 export interface PlayerState {
   position: [number, number, number]
   speed: number // km/h
-  distanceTraveled: number // m, le long du chemin généré
-  grade: number // %, pente de la route sous le véhicule
+  distanceTraveled: number // m, signée : négative quand on roule vers l'arrière
+  grade: number // %, pente de la route sous le véhicule dans le sens de conduite
   heading: number // degrés, 0 = nord (-Z)
 }
 
@@ -24,6 +24,7 @@ export interface DebugState {
 export interface SettingsState {
   debugOverlay: boolean
   showContours: boolean
+  drivingReverse: boolean
   cameraDistance: number // m, recul de la caméra derrière le véhicule
   cameraHeight: number // m, hauteur de la caméra
 }
@@ -32,6 +33,8 @@ interface GameStore {
   player: PlayerState
   debug: DebugState
   settings: SettingsState
+  seed: number // graine appliquée
+  seedDraft: number // graine en cours d'édition
   landscape: LandscapeParams // appliqué
   landscapeDraft: LandscapeParams // en cours d'édition
   generation: number // incrémenté à chaque régénération
@@ -46,11 +49,34 @@ interface GameStore {
   setPathPointCount: (count: number) => void
   toggleDebugOverlay: () => void
   toggleContours: () => void
+  toggleDrivingReverse: () => void
   setCameraDistance: (value: number) => void
   setCameraHeight: (value: number) => void
+  setSeedDraft: (seed: number) => void
   setLandscapeDraft: (partial: Partial<LandscapeParams>) => void
   regenerate: () => void
+  randomizeSeed: () => void
 }
+
+function randomSeed(): number {
+  return Math.floor(Math.random() * 0x100000000)
+}
+
+function seedFromUrl(): number | null {
+  const value = new URLSearchParams(window.location.search).get('seed')
+  if (value === null || value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed >>> 0 : null
+}
+
+function applyWorld(seed: number, landscape: LandscapeParams) {
+  setLandscapeParams(landscape)
+  setLandscapeSeed(seed)
+  proceduralPath.reset(seed)
+}
+
+const initialSeed = seedFromUrl() ?? randomSeed()
+applyWorld(initialSeed, DEFAULT_LANDSCAPE)
 
 // subscribeWithSelector permet aux composants HUD de s'abonner à une seule
 // valeur (ex: speed) et de la lire via un listener plutôt qu'un hook React,
@@ -62,9 +88,12 @@ export const useGameStore = create<GameStore>()(
     settings: {
       debugOverlay: false,
       showContours: false,
+      drivingReverse: false,
       cameraDistance: 11,
       cameraHeight: 4,
     },
+    seed: initialSeed,
+    seedDraft: initialSeed,
     landscape: DEFAULT_LANDSCAPE,
     landscapeDraft: DEFAULT_LANDSCAPE,
     generation: 0,
@@ -76,17 +105,23 @@ export const useGameStore = create<GameStore>()(
       set((s) => ({ settings: { ...s.settings, debugOverlay: !s.settings.debugOverlay } })),
     toggleContours: () =>
       set((s) => ({ settings: { ...s.settings, showContours: !s.settings.showContours } })),
+    toggleDrivingReverse: () =>
+      set((s) => ({ settings: { ...s.settings, drivingReverse: !s.settings.drivingReverse } })),
     setCameraDistance: (cameraDistance) =>
       set((s) => ({ settings: { ...s.settings, cameraDistance } })),
     setCameraHeight: (cameraHeight) => set((s) => ({ settings: { ...s.settings, cameraHeight } })),
+    setSeedDraft: (seedDraft) => set({ seedDraft }),
     setLandscapeDraft: (partial) =>
       set((s) => ({ landscapeDraft: { ...s.landscapeDraft, ...partial } })),
     regenerate: () => {
-      const next = { ...get().landscapeDraft }
-      setLandscapeParams(next)
-      reseedLandscape()
-      proceduralPath.reset()
-      set((s) => ({ landscape: next, generation: s.generation + 1 }))
+      const { seedDraft, landscapeDraft } = get()
+      const landscape = { ...landscapeDraft }
+      applyWorld(seedDraft, landscape)
+      set((s) => ({ seed: seedDraft, landscape, generation: s.generation + 1 }))
+    },
+    randomizeSeed: () => {
+      set({ seedDraft: randomSeed() })
+      get().regenerate()
     },
   })),
 )

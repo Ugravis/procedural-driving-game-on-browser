@@ -1,4 +1,5 @@
-import { createNoise2D } from 'simplex-noise'
+import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
+import { createRandom } from './random'
 
 export interface LandscapeParams {
   heightScale: number // m, amplitude du relief
@@ -16,15 +17,14 @@ export const LANDSCAPE_PRESETS: Record<'Plaine' | 'Colline' | 'Montagne', Landsc
 export const DEFAULT_LANDSCAPE: LandscapeParams = { ...LANDSCAPE_PRESETS.Montagne }
 
 let params: LandscapeParams = { ...DEFAULT_LANDSCAPE }
-let noise2D = createNoise2D()
+let noise2D: NoiseFunction2D = createNoise2D(createRandom(0))
 
 export function setLandscapeParams(next: LandscapeParams) {
   params = { ...next }
 }
 
-// Nouveau bruit aléatoire : le relief change, la graine n'étant pas fixée.
-export function reseedLandscape() {
-  noise2D = createNoise2D()
+export function setLandscapeSeed(seed: number) {
+  noise2D = createNoise2D(createRandom(seed))
 }
 
 // Source unique de vérité pour le relief : le terrain et la route en dérivent.
