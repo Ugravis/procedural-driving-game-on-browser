@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { biomeWeights, mapColour } from '../procgen/biomes'
+import { BIOMES, biomeWeights, dominantBiome, mapColour } from '../procgen/biomes'
 import { getLandscapeParams } from '../procgen/landscape'
 import { proceduralPath } from '../procgen/pathGenerator'
 import { heightAt } from '../procgen/terrain'
@@ -33,6 +33,8 @@ interface Pan {
 export function Minimap() {
   const [expanded, setExpanded] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const biomeLabel = useRef<HTMLSpanElement>(null)
+  const altitudeLabel = useRef<HTMLSpanElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const pan = useRef<Pan>({ x: 0, z: 0 })
   const drag = useRef<{
@@ -47,7 +49,10 @@ export function Minimap() {
   useEffect(() => {
     const context = canvasRef.current?.getContext('2d')
     if (!context) return
-    const draw = () => drawMinimap(context, view, expanded ? pan.current : { x: 0, z: 0 })
+    const draw = () => {
+      drawMinimap(context, view, expanded ? pan.current : { x: 0, z: 0 })
+      updateLabels(biomeLabel.current, altitudeLabel.current)
+    }
     draw()
     const id = window.setInterval(draw, REFRESH_MS)
     return () => window.clearInterval(id)
@@ -75,70 +80,75 @@ export function Minimap() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={expanded ? 'hud-minimap is-expanded' : 'hud-minimap'}
-      aria-label="Carte"
-      role="button"
-      tabIndex={0}
-      onClick={() => {
-        if (!expanded) open()
-      }}
-      onPointerDown={(event) => {
-        if (!expanded) return
-        drag.current = {
-          x: event.clientX,
-          y: event.clientY,
-          startX: event.clientX,
-          startY: event.clientY,
-          moved: false,
-        }
-        event.currentTarget.setPointerCapture(event.pointerId)
-      }}
-      onPointerMove={(event) => {
-        const current = drag.current
-        if (!current) return
-        const metresPerPixel =
-          (2 * EXPANDED.range) / event.currentTarget.getBoundingClientRect().width
-        const dx = event.clientX - current.x
-        const dy = event.clientY - current.y
-        pan.current = {
-          x: pan.current.x - dx * metresPerPixel,
-          z: pan.current.z - dy * metresPerPixel,
-        }
-        current.x = event.clientX
-        current.y = event.clientY
-        if (Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 3) {
-          current.moved = true
-        }
-      }}
-      onPointerUp={() => {
-        drag.current = null
-      }}
-    >
-      <canvas ref={canvasRef} width={view.size} height={view.size} />
-      {expanded && (
-        <div className="hud-minimap-controls" onPointerDown={(event) => event.stopPropagation()}>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation()
-              pan.current = { x: 0, z: 0 }
-            }}
-          >
-            Recentrer
-          </button>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation()
-              setExpanded(false)
-            }}
-          >
-            Fermer
-          </button>
-        </div>
-      )}
+    <div className={expanded ? 'hud-minimap-wrap is-expanded' : 'hud-minimap-wrap'}>
+      <div className="hud-minimap-label">
+        <span className="hud-minimap-biome" ref={biomeLabel} /> · <span ref={altitudeLabel} />
+      </div>
+      <div
+        ref={containerRef}
+        className={expanded ? 'hud-minimap is-expanded' : 'hud-minimap'}
+        aria-label="Carte"
+        role="button"
+        tabIndex={0}
+        onClick={() => {
+          if (!expanded) open()
+        }}
+        onPointerDown={(event) => {
+          if (!expanded) return
+          drag.current = {
+            x: event.clientX,
+            y: event.clientY,
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+          }
+          event.currentTarget.setPointerCapture(event.pointerId)
+        }}
+        onPointerMove={(event) => {
+          const current = drag.current
+          if (!current) return
+          const metresPerPixel =
+            (2 * EXPANDED.range) / event.currentTarget.getBoundingClientRect().width
+          const dx = event.clientX - current.x
+          const dy = event.clientY - current.y
+          pan.current = {
+            x: pan.current.x - dx * metresPerPixel,
+            z: pan.current.z - dy * metresPerPixel,
+          }
+          current.x = event.clientX
+          current.y = event.clientY
+          if (Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 3) {
+            current.moved = true
+          }
+        }}
+        onPointerUp={() => {
+          drag.current = null
+        }}
+      >
+        <canvas ref={canvasRef} width={view.size} height={view.size} />
+        {expanded && (
+          <div className="hud-minimap-controls" onPointerDown={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                pan.current = { x: 0, z: 0 }
+              }}
+            >
+              Recentrer
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                setExpanded(false)
+              }}
+            >
+              Fermer
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -240,4 +250,10 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView, pan: Pan)
   context.lineTo(arrowX + dirZ * arrow - dirX * arrow, arrowY - dirX * arrow - dirZ * arrow)
   context.closePath()
   context.fill()
+}
+
+function updateLabels(biome: HTMLSpanElement | null, altitude: HTMLSpanElement | null) {
+  const [x, y, z] = useGameStore.getState().player.position
+  if (biome) biome.textContent = BIOMES[dominantBiome(biomeWeights(x, z))] ?? ''
+  if (altitude) altitude.textContent = `altitude ${Math.round(y) || 0} m`
 }
