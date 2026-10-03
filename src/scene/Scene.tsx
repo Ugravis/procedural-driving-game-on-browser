@@ -1,6 +1,6 @@
 import { Sky } from '@react-three/drei'
 import { Lights } from './Lights'
-import { PathPreviewVehicle } from './PathPreviewVehicle'
+import { Vehicle } from './Vehicle'
 import { BridgeDecks } from './BridgeDecks'
 import { Terrain } from './Terrain'
 import { Water } from './Water'
@@ -17,7 +17,7 @@ export function Scene() {
       <Terrain />
       <BridgeDecks />
       <Water />
-      <PathPreviewVehicle />
+      <Vehicle />
     </>
   )
 }
