@@ -55,6 +55,26 @@ export class ProceduralPath {
     return this.points.length
   }
 
+  /**
+   * Élévation du point du chemin le plus proche de (x, z) en plan, et la
+   * distance (planaire) à ce point. Utilisé par le terrain pour savoir à
+   * quel point coller à la route (corridor) et où s'en détacher.
+   */
+  nearestElevation(x: number, z: number): { elevation: number; distance: number } {
+    let bestDistSq = Infinity
+    let elevation = 0
+    for (const point of this.points) {
+      const dx = point.position.x - x
+      const dz = point.position.z - z
+      const distSq = dx * dx + dz * dz
+      if (distSq < bestDistSq) {
+        bestDistSq = distSq
+        elevation = point.position.y
+      }
+    }
+    return { elevation, distance: Math.sqrt(bestDistSq) }
+  }
+
   getPointAt(distance: number): { position: Vector3; tangent: Vector3 } {
     const first = this.points[0]!
     const last = this.points[this.points.length - 1]!
