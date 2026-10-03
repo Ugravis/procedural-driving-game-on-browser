@@ -1,4 +1,5 @@
 import { isUnderWater } from './water'
+import { biomeWeights, vegetationFactor } from './biomes'
 import type { ProceduralPath } from './pathGenerator'
 import { heightAt } from './terrain'
 
@@ -36,10 +37,11 @@ export function scatterVegetation(
     for (let ix = 0; ix < cellsPerSide; ix++) {
       const cellX = originX - chunkSize / 2 + ix * CELL_SIZE
       const cellZ = originZ - chunkSize / 2 + iz * CELL_SIZE
-      if (hash(cellX, cellZ) > DENSITY) continue
 
       const jitterX = cellX + (hash(cellX + 0.37, cellZ) - 0.5) * CELL_SIZE
       const jitterZ = cellZ + (hash(cellX, cellZ + 0.59) - 0.5) * CELL_SIZE
+      const density = DENSITY * vegetationFactor(biomeWeights(jitterX, jitterZ))
+      if (hash(cellX, cellZ) > density) continue
 
       const { distance } = path.roadAt(jitterX, jitterZ)
       if (distance < ROAD_CLEARANCE || isUnderWater(jitterX, jitterZ)) continue

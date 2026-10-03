@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { biomeWeights, mapColour } from '../procgen/biomes'
 import { getLandscapeParams } from '../procgen/landscape'
 import { proceduralPath } from '../procgen/pathGenerator'
 import { heightAt } from '../procgen/terrain'
@@ -16,7 +17,6 @@ const CONTOUR_INTERVAL = 10 // m, écart entre courbes de niveau
 const REFRESH_MS = 250
 const DEG_TO_RAD = Math.PI / 180
 
-const LAND = '#4d6b3b'
 const WATER = '#1f4e6b'
 const CONTOUR = 'rgba(210, 225, 180, 0.55)'
 const ROAD = '#f2f2f2'
@@ -161,26 +161,28 @@ function drawMinimap(context: CanvasRenderingContext2D, view: MapView, pan: Pan)
   // Même hauteur que le terrain 3D (route aplanie comprise), pour que l'eau coïncide.
   const bands: number[][] = []
   const wet: boolean[][] = []
+  const land: string[][] = []
   for (let j = 0; j < cells; j++) {
     const row: number[] = []
     const wetRow: boolean[] = []
+    const landRow: string[] = []
     for (let i = 0; i < cells; i++) {
-      const height = heightAt(
-        originX + (i + 0.5) * cell,
-        originZ + (j + 0.5) * cell,
-        proceduralPath,
-      )
+      const worldX = originX + (i + 0.5) * cell
+      const worldZ = originZ + (j + 0.5) * cell
+      const height = heightAt(worldX, worldZ, proceduralPath)
       wetRow.push(height < waterLevel)
       row.push(Math.floor(height / CONTOUR_INTERVAL))
+      landRow.push(mapColour(biomeWeights(worldX, worldZ)))
     }
     bands.push(row)
     wet.push(wetRow)
+    land.push(landRow)
   }
 
   context.clearRect(0, 0, size, size)
   for (let j = 0; j < cells; j++) {
     for (let i = 0; i < cells; i++) {
-      context.fillStyle = wet[j]![i] ? WATER : LAND
+      context.fillStyle = wet[j]![i] ? WATER : land[j]![i]!
       context.fillRect(i * cellPx, j * cellPx, cellPx + 1, cellPx + 1)
     }
   }

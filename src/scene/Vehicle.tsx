@@ -43,6 +43,12 @@ export function Vehicle() {
   useFrame((_, delta) => {
     const state = useGameStore.getState()
     const p = pose.current
+    if (state.teleportTarget) {
+      p.x = state.teleportTarget.x
+      p.z = state.teleportTarget.z
+      p.speed = 0
+      state.consumeTeleport()
+    }
     if (state.generation !== generationRef.current) {
       generationRef.current = state.generation
       placeAtStart()

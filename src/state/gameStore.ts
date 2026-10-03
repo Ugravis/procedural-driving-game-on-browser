@@ -6,8 +6,12 @@ import {
   setLandscapeSeed,
   type LandscapeParams,
 } from '../procgen/landscape'
+import { findNearestBiome } from '../procgen/biomes'
+import { getLandscapeParams, landscapeHeight } from '../procgen/landscape'
 import { proceduralPath } from '../procgen/pathGenerator'
 import type { Season } from '../scene/seasons'
+
+const DRY_MARGIN = 5 // m, au-dessus du niveau de l'eau pour une téléportation
 
 export interface PlayerState {
   position: [number, number, number]
@@ -59,6 +63,9 @@ interface GameStore {
   setLandscapeDraft: (partial: Partial<LandscapeParams>) => void
   regenerate: () => void
   randomizeSeed: () => void
+  teleportTarget: { x: number; z: number } | null // demande de téléportation, consommée par le véhicule
+  teleportToBiome: (biomeIndex: number) => void
+  consumeTeleport: () => void
 }
 
 function randomSeed(): number {
@@ -94,6 +101,19 @@ export const useGameStore = create<GameStore>()(
     landscape: DEFAULT_LANDSCAPE,
     landscapeDraft: DEFAULT_LANDSCAPE,
     generation: 0,
+    teleportTarget: null,
+    teleportToBiome: (biomeIndex) => {
+      const [x, , z] = get().player.position
+      const waterLevel = getLandscapeParams().waterLevel
+      const target = findNearestBiome(
+        biomeIndex,
+        x,
+        z,
+        (tx, tz) => landscapeHeight(tx, tz) > waterLevel + DRY_MARGIN,
+      )
+      if (target) set({ teleportTarget: target })
+    },
+    consumeTeleport: () => set({ teleportTarget: null }),
     setPlayerState: (position, speed, distanceTraveled, grade, heading) =>
       set({ player: { position, speed, distanceTraveled, grade, heading } }),
     setFps: (fps) => set((s) => ({ debug: { ...s.debug, fps } })),

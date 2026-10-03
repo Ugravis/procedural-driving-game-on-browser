@@ -1,4 +1,5 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
+import { biomeWeights, reliefFactors, setBiomeSeed } from './biomes'
 import { createRandom } from './random'
 
 export interface LandscapeParams {
@@ -52,6 +53,7 @@ export function getLandscapeParams(): LandscapeParams {
 
 export function setLandscapeSeed(seed: number) {
   noise2D = createNoise2D(createRandom(seed))
+  setBiomeSeed(seed)
 }
 
 // Source unique de vérité pour le relief : le terrain et la route en dérivent.
@@ -66,5 +68,6 @@ export function landscapeHeight(x: number, z: number): number {
     amplitude *= params.persistence
     frequency *= 2
   }
-  return (height / norm) * params.heightScale
+  const { amplitude: biomeAmplitude, offset } = reliefFactors(biomeWeights(x, z))
+  return (height / norm) * params.heightScale * biomeAmplitude + offset
 }
