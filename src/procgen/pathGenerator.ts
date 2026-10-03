@@ -3,7 +3,7 @@ import { Vector3 } from 'three'
 import { getLandscapeParams, landscapeHeight } from './landscape'
 import { createRandom } from './random'
 
-export const ROAD_HALF_WIDTH = 1.2 // m, demi-largeur de la route (rendu et aplanissement du terrain)
+export const ROAD_HALF_WIDTH = 3.5 // m, demi-largeur de la route : deux voies de 3,5 m, double sens
 
 const SEGMENT_LENGTH = 10 // m, distance entre deux points de contrôle
 const SUBSAMPLES = 4 // échantillons de courbe par segment de contrôle

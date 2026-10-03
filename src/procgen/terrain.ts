@@ -7,8 +7,8 @@ export const CHUNK_SIZE = 50 // m, taille d'un chunk de terrain
 export const CHUNK_RESOLUTION = 50 // subdivisions par côté (1 m, pour que l'aplanissement de la route soit net)
 export const RENDER_RADIUS_CHUNKS = 4 // rayon (en chunks) chargé autour du joueur
 
-const SHOULDER_WIDTH = 0.5 // m, bande plate de chaque côté de la route
-const TRANSITION_WIDTH = 3 // m, raccord doux (talus) entre la bande plate et le relief naturel
+const SHOULDER_WIDTH = 1 // m, bande plate de chaque côté de la route
+const TRANSITION_WIDTH = 4 // m, raccord doux (talus) entre la bande plate et le relief naturel
 
 /**
  * Terrain autour de la route : aplani à son altitude sur la route et son

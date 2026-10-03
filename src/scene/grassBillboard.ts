@@ -8,8 +8,8 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { SEASON_PALETTES, type Season } from './seasons'
 
-const TUFT_WIDTH = 1.2 // m
-const TUFT_HEIGHT = 0.7 // m
+const TUFT_WIDTH = 0.8 // m
+const TUFT_HEIGHT = 0.5 // m
 
 let geometry: ReturnType<typeof mergeGeometries> | null = null
 let texture: CanvasTexture | null = null
