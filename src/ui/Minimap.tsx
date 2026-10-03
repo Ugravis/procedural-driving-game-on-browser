@@ -13,8 +13,8 @@ interface MapView {
 
 const COMPACT: MapView = { size: 200, range: 300, cell: 10 }
 const EXPANDED_SIZE = 640
-const ZOOM_RANGES = [250, 500, 1000, 2000, 4000] // m, demi-côté de la carte agrandie selon le zoom
-const DEFAULT_ZOOM = 2
+const ZOOM_RANGES = [250, 500, 1000, 2000, 4000, 8000, 16000] // m, demi-côté de la carte agrandie selon le zoom
+const DEFAULT_ZOOM = 3
 const CELLS_ACROSS = 50 // nombre de cellules de relief sur la largeur de la carte agrandie
 const CONTOUR_INTERVAL = 10 // m, écart entre courbes de niveau
 const REFRESH_MS = 250
