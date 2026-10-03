@@ -11,7 +11,7 @@ interface ChunkCoord {
   chunkZ: number
 }
 
-function computeVisibleChunks(x: number, z: number): ChunkCoord[] {
+function computeVisibleChunks(x: number, z: number, generation: number): ChunkCoord[] {
   const centerX = Math.round(x / CHUNK_SIZE)
   const centerZ = Math.round(z / CHUNK_SIZE)
   const chunks: ChunkCoord[] = []
@@ -19,28 +19,29 @@ function computeVisibleChunks(x: number, z: number): ChunkCoord[] {
     for (let dx = -RENDER_RADIUS_CHUNKS; dx <= RENDER_RADIUS_CHUNKS; dx++) {
       const chunkX = centerX + dx
       const chunkZ = centerZ + dz
-      chunks.push({ key: `${chunkX}:${chunkZ}`, chunkX, chunkZ })
+      chunks.push({ key: `${generation}:${chunkX}:${chunkZ}`, chunkX, chunkZ })
     }
   }
   return chunks
 }
 
 // Streaming par chunks : on ne recalcule l'ensemble visible que lorsque le
-// joueur change de chunk (pas à chaque frame). React se charge de monter les
-// nouveaux chunks et de démonter ceux qui sortent du rayon — chaque chunk
-// libère sa géométrie dans son propre effet de nettoyage (TerrainChunk).
+// joueur change de chunk ou que le relief est régénéré (la génération fait
+// partie de la clé de chaque chunk, donc React remonte tout le terrain).
 export function Terrain() {
-  const [visibleChunks, setVisibleChunks] = useState<ChunkCoord[]>(() => computeVisibleChunks(0, 0))
-  const lastCenterKey = useRef('0:0')
+  const [visibleChunks, setVisibleChunks] = useState<ChunkCoord[]>(() =>
+    computeVisibleChunks(0, 0, useGameStore.getState().generation),
+  )
+  const lastCenterKey = useRef('')
 
   useFrame(() => {
-    const { position } = useGameStore.getState().player
-    const centerX = Math.round(position[0] / CHUNK_SIZE)
-    const centerZ = Math.round(position[2] / CHUNK_SIZE)
-    const centerKey = `${centerX}:${centerZ}`
+    const { player, generation } = useGameStore.getState()
+    const centerX = Math.round(player.position[0] / CHUNK_SIZE)
+    const centerZ = Math.round(player.position[2] / CHUNK_SIZE)
+    const centerKey = `${generation}:${centerX}:${centerZ}`
     if (centerKey === lastCenterKey.current) return
     lastCenterKey.current = centerKey
-    setVisibleChunks(computeVisibleChunks(position[0], position[2]))
+    setVisibleChunks(computeVisibleChunks(player.position[0], player.position[2], generation))
   })
 
   return (

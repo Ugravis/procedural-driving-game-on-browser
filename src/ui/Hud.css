@@ -36,3 +36,80 @@
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
 }
+
+.hud-bottom-left {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 260px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+.hud-panel {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-panel h2 {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.hud-panel h3 {
+  margin: 10px 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.hud-panel dl {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.hud-panel dl > div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.hud-panel dt {
+  opacity: 0.7;
+}
+
+.hud-panel dd {
+  margin: 0;
+}
+
+.hud-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.hud-slider {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.hud-slider input {
+  width: 100%;
+}
+
+.hud-button {
+  margin-top: 8px;
+  width: 100%;
+  padding: 6px;
+  cursor: pointer;
+}

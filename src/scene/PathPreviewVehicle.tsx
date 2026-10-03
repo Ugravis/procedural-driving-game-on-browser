@@ -4,43 +4,65 @@ import { Vector3, type Mesh } from 'three'
 import { proceduralPath } from '../procgen/pathGenerator'
 import { useGameStore } from '../state/gameStore'
 
-// Stand-in pour le futur véhicule (étape 5) : avance le long du chemin généré
-// à une vitesse simulée. Sert à valider visuellement la génération procédurale
-// (le chemin doit s'étendre devant et se recycler derrière sans à-coup) et à
-// alimenter le store en attendant le vrai contrôleur. Fait aussi suivre la
-// caméra (sans lissage, juste pour pouvoir observer le chemin défiler) : la
-// vraie caméra de poursuite arrive à l'étape 5. À retirer à ce moment-là.
+const SPEED_KMH = 27
+const VEHICLE_LIFT = 0.5 // m, au-dessus de la route
+const RAD_TO_DEG = 180 / Math.PI
+
+// Stand-in pour le futur véhicule (étape 5) : avance le long du chemin à vitesse
+// constante et fait suivre la caméra derrière lui. À remplacer par le vrai
+// contrôleur et la vraie caméra de poursuite.
 export function PathPreviewVehicle() {
   const { camera } = useThree()
   const meshRef = useRef<Mesh>(null)
   const distanceRef = useRef(0)
+  const generationRef = useRef(useGameStore.getState().generation)
   const fpsAccumulator = useRef({ frames: 0, elapsed: 0 })
 
-  useFrame((state, delta) => {
-    const elapsed = state.clock.elapsedTime
-    const speed = 20 + Math.sin(elapsed * 0.3) * 12 // km/h, démo
-    distanceRef.current += (speed / 3.6) * delta // km/h -> m/s
+  useFrame((_, delta) => {
+    const state = useGameStore.getState()
+    if (state.generation !== generationRef.current) {
+      generationRef.current = state.generation
+      distanceRef.current = 0
+    }
+
+    distanceRef.current += (SPEED_KMH / 3.6) * delta
 
     proceduralPath.update(distanceRef.current)
     const { position, tangent } = proceduralPath.getPointAt(distanceRef.current)
+    const planLength = Math.hypot(tangent.x, tangent.z) || 1
+    const forwardX = tangent.x / planLength
+    const forwardZ = tangent.z / planLength
+    const grade = (tangent.y / planLength) * 100
+    const heading = Math.atan2(forwardX, -forwardZ) * RAD_TO_DEG
 
     const mesh = meshRef.current
     if (mesh) {
-      mesh.position.set(position.x, position.y + 0.5, position.z)
-      mesh.lookAt(new Vector3(position.x, position.y + 0.5, position.z).add(tangent))
-      camera.position.set(mesh.position.x, mesh.position.y + 3, mesh.position.z + 8)
-      camera.lookAt(mesh.position)
+      const target = new Vector3(position.x, position.y + VEHICLE_LIFT, position.z)
+      mesh.position.copy(target)
+      mesh.lookAt(target.clone().add(tangent))
+
+      const { cameraDistance, cameraHeight } = state.settings
+      camera.position.set(
+        target.x - forwardX * cameraDistance,
+        target.y + cameraHeight,
+        target.z - forwardZ * cameraDistance,
+      )
+      camera.lookAt(target)
     }
 
-    useGameStore
-      .getState()
-      .setPlayerState([position.x, position.y, position.z], speed, distanceRef.current)
+    state.setPlayerState(
+      [position.x, position.y, position.z],
+      SPEED_KMH,
+      distanceRef.current,
+      grade,
+      heading,
+    )
 
     const acc = fpsAccumulator.current
     acc.frames += 1
     acc.elapsed += delta
     if (acc.elapsed >= 0.5) {
-      useGameStore.getState().setFps(Math.round(acc.frames / acc.elapsed))
+      state.setFps(Math.round(acc.frames / acc.elapsed))
       acc.frames = 0
       acc.elapsed = 0
     }
