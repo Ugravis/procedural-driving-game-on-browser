@@ -6,13 +6,21 @@ export const ROAD_HALF_WIDTH = 1.2 // m, demi-largeur de la route (rendu et apla
 
 const SEGMENT_LENGTH = 10 // m, distance entre deux points de contrôle
 const MAX_TURN_PER_SEGMENT = 0.35 // rad, virage max d'un segment à l'autre
-const CANDIDATE_TURNS = [-0.35, -0.23, -0.12, 0, 0.12, 0.23, 0.35] // rad, caps testés à chaque segment
+const CANDIDATE_TURNS = [-0.7, -0.5, -0.35, -0.2, -0.1, 0, 0.1, 0.2, 0.35, 0.5, 0.7] // rad, caps testés à chaque segment
 const MAX_GRADE = 0.12 // pente max ~12 %
-const STEEP_PENALTY = 10 // pénalité d'un cap dépassant MAX_GRADE
+const STEEP_PENALTY = 1000 // pénalité d'un cap dépassant MAX_GRADE
 const LATERAL_PROBE = 4 // m, écart latéral pour mesurer le dévers
 const LATERAL_WEIGHT = 0.5 // poids du dévers dans le coût d'un cap
 const TURN_WEIGHT = 0.5 // poids de l'écart au virage souhaité dans le coût
 const WANDER_FREQUENCY = 0.01 // fréquence du bruit qui donne le virage souhaité
+const GLOBAL_DIRECTION_FREQUENCY = 0.0002 // 1/m, la direction générale change sur plusieurs km
+const GLOBAL_DIRECTION_RANGE = 1 // rad, écart max de la direction générale à l'axe initial
+const GLOBAL_DIRECTION_WEIGHT = 0.3 // poids de l'écart à la direction générale dans le coût
+const CLEARANCE = 8 // m, distance minimale à un point ancien (évite les croisements)
+const MIN_SEPARATION_SEGMENTS = 40 // nombre de segments à partir duquel un point est "ancien"
+const COLLISION_PENALTY = 1000 // pénalité d'un cap qui recroise le tracé
+const LOOKAHEAD_WEIGHT = 0.7 // poids du meilleur coût au segment suivant dans le choix d'un cap
+const GRID_CELL = 20 // m, taille des cellules de recherche spatiale
 const AHEAD_BUFFER = 300 // m, distance générée devant la position courante
 const BEHIND_BUFFER = 50 // m, distance gardée derrière avant recyclage
 
@@ -21,11 +29,30 @@ interface PathPoint {
   distance: number // distance cumulée depuis l'origine du chemin
 }
 
+interface Candidate {
+  heading: number
+  position: Vector3
+  cost: number
+}
+
+const TWO_PI = Math.PI * 2
+
+function angleDifference(a: number, b: number): number {
+  let d = (a - b) % TWO_PI
+  if (d > Math.PI) d -= TWO_PI
+  if (d < -Math.PI) d += TWO_PI
+  return d
+}
+
 // Le terrain (landscape.ts) est la seule source de vérité : la route suit son
-// altitude exacte et choisit ses caps pour rester praticable.
+// altitude exacte, garde une direction générale qui varie lentement, et
+// évite de recroiser un de ses anciens points.
 export class ProceduralPath {
   private readonly wander2D = createNoise2D()
+  private readonly direction2D = createNoise2D()
   private points: PathPoint[]
+  private readonly history: Vector3[] = []
+  private readonly grid = new Map<string, number[]>()
   private heading = 0
   private curve: CatmullRomCurve3
   revision = 0
@@ -33,6 +60,7 @@ export class ProceduralPath {
   constructor() {
     const origin = new Vector3(0, landscapeHeight(0, 0), 0)
     this.points = [{ position: origin, distance: 0 }]
+    this.record(origin)
     this.curve = new CatmullRomCurve3(this.points.map((p) => p.position))
     this.extend(AHEAD_BUFFER)
     this.rebuildCurve()
@@ -100,44 +128,106 @@ export class ProceduralPath {
     while (last.distance < targetDistance) {
       const preferredTurn =
         this.wander2D(last.distance * WANDER_FREQUENCY, 0) * MAX_TURN_PER_SEGMENT
-      const step = this.chooseStep(last.position, preferredTurn)
+      const targetHeading =
+        this.direction2D(last.distance * GLOBAL_DIRECTION_FREQUENCY, 0) * GLOBAL_DIRECTION_RANGE
+      const step = this.chooseStep(last.position, preferredTurn, targetHeading)
       this.heading = step.heading
       last = { position: step.position, distance: last.distance + SEGMENT_LENGTH }
       this.points.push(last)
+      this.record(last.position)
       didExtend = true
     }
     return didExtend
   }
 
-  private chooseStep(from: Vector3, preferredTurn: number) {
-    let best: { heading: number; position: Vector3; cost: number } | null = null
+  private chooseStep(from: Vector3, preferredTurn: number, targetHeading: number) {
+    const lastIndex = this.history.length - 1
+    let best: Candidate | null = null
 
     for (const turn of CANDIDATE_TURNS) {
-      const heading = this.heading + turn
-      const forwardX = Math.sin(heading)
-      const forwardZ = -Math.cos(heading)
-      const x = from.x + forwardX * SEGMENT_LENGTH
-      const z = from.z + forwardZ * SEGMENT_LENGTH
-      const y = landscapeHeight(x, z)
-
-      const slopeAlong = (y - from.y) / SEGMENT_LENGTH
-      const slopeAcross =
-        (landscapeHeight(x - forwardZ * LATERAL_PROBE, z + forwardX * LATERAL_PROBE) -
-          landscapeHeight(x + forwardZ * LATERAL_PROBE, z - forwardX * LATERAL_PROBE)) /
-        (2 * LATERAL_PROBE)
-
-      const cost =
-        Math.abs(slopeAlong) +
-        LATERAL_WEIGHT * Math.abs(slopeAcross) +
-        TURN_WEIGHT * Math.abs(turn - preferredTurn) +
-        (Math.abs(slopeAlong) > MAX_GRADE ? STEEP_PENALTY : 0)
-
-      if (!best || cost < best.cost) {
-        best = { heading, position: new Vector3(x, y, z), cost }
+      const first = this.evaluate(from, this.heading, turn, preferredTurn, targetHeading, lastIndex)
+      let future = Infinity
+      for (const nextTurn of CANDIDATE_TURNS) {
+        const second = this.evaluate(
+          first.position,
+          first.heading,
+          nextTurn,
+          0,
+          targetHeading,
+          lastIndex,
+        )
+        future = Math.min(future, second.cost)
       }
+      const total = first.cost + LOOKAHEAD_WEIGHT * future
+      if (!best || total < best.cost) best = { ...first, cost: total }
     }
 
     return { heading: best!.heading, position: best!.position }
+  }
+
+  private evaluate(
+    from: Vector3,
+    fromHeading: number,
+    turn: number,
+    preferredTurn: number,
+    targetHeading: number,
+    lastIndex: number,
+  ): Candidate {
+    const heading = fromHeading + turn
+    const forwardX = Math.sin(heading)
+    const forwardZ = -Math.cos(heading)
+    const x = from.x + forwardX * SEGMENT_LENGTH
+    const z = from.z + forwardZ * SEGMENT_LENGTH
+    const y = landscapeHeight(x, z)
+
+    const slopeAlong = (y - from.y) / SEGMENT_LENGTH
+    const slopeAcross =
+      (landscapeHeight(x - forwardZ * LATERAL_PROBE, z + forwardX * LATERAL_PROBE) -
+        landscapeHeight(x + forwardZ * LATERAL_PROBE, z - forwardX * LATERAL_PROBE)) /
+      (2 * LATERAL_PROBE)
+
+    const cost =
+      Math.abs(slopeAlong) +
+      LATERAL_WEIGHT * Math.abs(slopeAcross) +
+      TURN_WEIGHT * Math.abs(turn - preferredTurn) +
+      GLOBAL_DIRECTION_WEIGHT * Math.abs(angleDifference(heading, targetHeading)) +
+      (Math.abs(slopeAlong) > MAX_GRADE ? STEEP_PENALTY : 0) +
+      (this.collides(x, z, lastIndex) ? COLLISION_PENALTY : 0)
+
+    return { heading, position: new Vector3(x, y, z), cost }
+  }
+
+  private record(position: Vector3) {
+    const index = this.history.length
+    this.history.push(position)
+    const key = this.cellKey(position.x, position.z)
+    const cell = this.grid.get(key)
+    if (cell) cell.push(index)
+    else this.grid.set(key, [index])
+  }
+
+  private collides(x: number, z: number, lastIndex: number): boolean {
+    const cx = Math.floor(x / GRID_CELL)
+    const cz = Math.floor(z / GRID_CELL)
+    const oldestAllowed = lastIndex - MIN_SEPARATION_SEGMENTS
+    for (let i = cx - 1; i <= cx + 1; i++) {
+      for (let j = cz - 1; j <= cz + 1; j++) {
+        const cell = this.grid.get(`${i}:${j}`)
+        if (!cell) continue
+        for (const index of cell) {
+          if (index > oldestAllowed) continue
+          const p = this.history[index]!
+          const dx = p.x - x
+          const dz = p.z - z
+          if (dx * dx + dz * dz < CLEARANCE * CLEARANCE) return true
+        }
+      }
+    }
+    return false
+  }
+
+  private cellKey(x: number, z: number): string {
+    return `${Math.floor(x / GRID_CELL)}:${Math.floor(z / GRID_CELL)}`
   }
 
   private prune(currentDistance: number): boolean {
