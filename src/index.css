@@ -1,3 +1,27 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #111318;
+  --foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #111318;
+  --accent: rgba(255, 255, 255, 0.1);
+  --accent-foreground: #ffffff;
+  --input: rgba(255, 255, 255, 0.2);
+  --ring: rgba(255, 255, 255, 0.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
 * {
   box-sizing: border-box;
 }
