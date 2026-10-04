@@ -14,12 +14,12 @@ const STORAGE_KEY = 'welcome-panel-seen'
 // Les éléments de « prochaines étapes » sont des évolutions prévues, pas des bugs.
 const KNOWN_ISSUES = [
   'La génération de la route peut être chaotique après quelques kilomètres.',
-  'La génération des ponts est en cours de développement.'
+  'La génération des ponts est en cours de développement.',
 ]
 
 const UPCOMING = [
   'Textures réalistes pour le terrain, les arbres, l’herbe et la route (#53).',
-  'Revoir la génération du terrain pour moins de monotonie.'
+  'Revoir la génération du terrain pour moins de monotonie.',
 ]
 
 function readSeen(): boolean {
@@ -61,7 +61,8 @@ export function WelcomePanel() {
           <DialogHeader>
             <DialogTitle>Procedural outdoor driving game (v0.1.0)</DialogTitle>
             <DialogDescription>
-              Conduisez sur une route infinie générée procéduralement et contemplez les paysages des différents biomes. 
+              Conduisez sur une route infinie générée procéduralement et contemplez les paysages des
+              différents biomes.
             </DialogDescription>
           </DialogHeader>
 
