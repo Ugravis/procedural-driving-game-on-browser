@@ -111,7 +111,7 @@ export const useGameStore = create<GameStore>()(
     landscapeDraft: DEFAULT_LANDSCAPE,
     generation: 0,
     lightsOn: false,
-    handbrake: false,
+    handbrake: true,
     braking: false,
     teleportTarget: null,
     teleportToBiome: (biomeIndex) => {
