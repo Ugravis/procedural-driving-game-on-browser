@@ -1,10 +1,12 @@
 import './App.css'
+import { GameCanvas } from './scene/GameCanvas'
+import { Hud } from './ui/Hud'
 
 function App() {
   return (
-    <main className="app-placeholder">
-      <h1>Procedural Driving Game</h1>
-      <p>Socle en construction — scène 3D à venir.</p>
+    <main className="app-canvas-container">
+      <GameCanvas />
+      <Hud />
     </main>
   )
 }

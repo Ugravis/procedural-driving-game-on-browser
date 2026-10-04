@@ -10,4 +10,3 @@ Consignes :
 - Utilisation de Shadcn pour le design front de la v0. 
 - Dépot Github : https://github.com/Ugravis/procedural-driving-game-on-browser. 
 - Ne signe aucun commit avec "Claude", pas non plus co-authored by. 
-- Ne t'occupe pas des PR, c'est mon rôle. 

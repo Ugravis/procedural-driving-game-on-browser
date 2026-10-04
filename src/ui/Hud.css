@@ -1,0 +1,217 @@
+.hud {
+  position: fixed;
+  inset: 0;
+  color: white;
+  font-family: system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.hud-bottom-left {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 260px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+.hud-panel {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-panel h2 {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.hud-panel h3 {
+  margin: 10px 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.hud-panel dl {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.hud-panel dl > div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.hud-panel dt {
+  opacity: 0.7;
+}
+
+.hud-panel dd {
+  margin: 0;
+}
+
+.hud-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.hud-slider {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.hud-slider input {
+  width: 100%;
+}
+
+.hud-button {
+  margin-top: 8px;
+  width: 100%;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.hud-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.hud-presets .hud-button {
+  margin-top: 0;
+}
+
+.hud-seed {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px;
+}
+
+.hud-seed .hud-button {
+  margin-top: 0;
+}
+
+.hud-fold {
+  margin-top: 8px;
+}
+
+.hud-fold summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 2px 0;
+  user-select: none;
+}
+
+.hud-button.is-active {
+  background: #2d6a4f;
+  color: white;
+}
+
+.hud-minimap-wrap {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.hud-minimap-wrap.is-expanded {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.hud-minimap-label {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(20, 30, 20, 0.8);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-minimap-biome {
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.hud-minimap {
+  position: relative;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hud-minimap canvas {
+  display: block;
+  width: 200px;
+  height: 200px;
+}
+
+.hud-minimap.is-expanded {
+  cursor: grab;
+  touch-action: none;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+}
+
+.hud-minimap.is-expanded canvas {
+  width: min(640px, 80vmin);
+  height: min(640px, 80vmin);
+}
+
+.hud-minimap-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.hud-minimap-controls button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(20, 30, 20, 0.8);
+  color: white;
+  cursor: pointer;
+}
+
+.hud-key {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  font: inherit;
+  text-align: center;
+}
+
+.hud-panel dl > div.is-active dt,
+.hud-panel dl > div.is-active dd {
+  color: #9be3ad;
+  opacity: 1;
+}
