@@ -13,13 +13,14 @@ const STORAGE_KEY = 'welcome-panel-seen'
 
 // Les éléments de « prochaines étapes » sont des évolutions prévues, pas des bugs.
 const KNOWN_ISSUES = [
-  'La génération de la route peut être chaotique (virages brusques, tracé peu lisible).',
-  'Pas encore de retour en arrière possible sur le chemin (#16).',
-  'Terrain : montagnes et lacets encore absents (#20).',
-  'Textures réalistes pas encore intégrées (#53).',
+  'La génération de la route peut être chaotique après quelques kilomètres.',
+  'La génération des ponts est en cours de développement.'
 ]
 
-const UPCOMING = ['Textures réalistes pour le terrain, les arbres et l’herbe (#53).']
+const UPCOMING = [
+  'Textures réalistes pour le terrain, les arbres, l’herbe et la route (#53).',
+  'Revoir la génération du terrain pour moins de monotonie.'
+]
 
 function readSeen(): boolean {
   try {
@@ -58,15 +59,14 @@ export function WelcomePanel() {
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Bienvenue dans le générateur de paysages</DialogTitle>
+            <DialogTitle>Procedural outdoor driving game (v0.1.0)</DialogTitle>
             <DialogDescription>
-              Conduisez sur une route générée procéduralement et contemplez les paysages. Version v0
-              : sans textures.
+              Conduisez sur une route infinie générée procéduralement et contemplez les paysages des différents biomes. 
             </DialogDescription>
           </DialogHeader>
 
           <section className="grid gap-2 text-sm">
-            <h3 className="font-semibold">Bugs connus</h3>
+            <h3 className="font-semibold">Bugs importants</h3>
             <ul className="list-disc space-y-1 pl-5 text-white/80">
               {KNOWN_ISSUES.map((item) => (
                 <li key={item}>{item}</li>
